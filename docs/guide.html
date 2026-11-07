@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ocean Container Routing Guide</title>
+<style>
+:root{
+  --bg:#fbfaf7;--surface:#ffffff;--text:#1d1f22;--text2:#4a4f57;--muted:#6b717a;
+  --line:#d9d6cf;--soft:#f1efe9;--accent:#1f6fb2;--accent-soft:#dcebf7;
+  --warn:#b4472b;--warn-soft:#f6e1da;--ok:#2f7d4f;--ok-soft:#dcefe3;--code:#f3f1ec;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15171a;--surface:#1c1f23;--text:#e9e7e2;--text2:#b9b6af;--muted:#8f9399;
+    --line:#363a40;--soft:#23262b;--accent:#6fb1e8;--accent-soft:#1d3346;
+    --warn:#e58a6f;--warn-soft:#41261f;--ok:#79c495;--ok-soft:#1e3527;--code:#23262b;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15171a;--surface:#1c1f23;--text:#e9e7e2;--text2:#b9b6af;--muted:#8f9399;
+  --line:#363a40;--soft:#23262b;--accent:#6fb1e8;--accent-soft:#1d3346;
+  --warn:#e58a6f;--warn-soft:#41261f;--ok:#79c495;--ok-soft:#1e3527;--code:#23262b;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:32px 16px 80px}
+header.hero{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:8px}
+h1{font-size:2rem;line-height:1.2;margin:0 0 12px;letter-spacing:-.01em}
+h2{font-size:1.45rem;line-height:1.3;margin:56px 0 12px;padding-top:8px;border-top:1px solid var(--line)}
+h3{font-size:1.1rem;margin:28px 0 8px}
+p,li{color:var(--text)}
+.lede{font-size:1.1rem;color:var(--text2);margin:0}
+.repo{margin:12px 0 0;font-size:.95rem;color:var(--text2)}
+.kicker{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 6px}
+a{color:var(--accent)}
+code{font:.88em ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:1px 5px;border-radius:4px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+pre code{background:none;padding:0}
+nav.toc{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:24px 0}
+nav.toc ol{margin:6px 0 0;padding-left:20px;columns:2;column-gap:28px}
+nav.toc li{break-inside:avoid;font-size:.95rem}
+@media (max-width:600px){nav.toc ol{columns:1}}
+figure{margin:20px 0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
+figure svg{display:block;width:100%;height:auto;color:var(--text)}
+figure{overflow-x:auto}
+@media (max-width:600px){figure svg{min-width:640px}}
+figcaption{font-size:.9rem;color:var(--text2);margin-top:10px}
+.scroll-x{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.92rem;margin:12px 0}
+th,td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left;vertical-align:top}
+th{color:var(--text2);font-weight:600}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+tr.hi td{background:var(--accent-soft)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
+.card h4{margin:0 0 6px;font-size:1rem}
+.card p{margin:0;font-size:.93rem;color:var(--text2)}
+.scenario{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:14px 0}
+.scenario div{border-left:3px solid var(--line);padding:2px 0 2px 12px}
+.scenario div.biz{border-color:var(--muted)}
+.scenario div.solver{border-color:var(--accent)}
+.scenario div.see{border-color:var(--ok)}
+.scenario b{display:block;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:2px}
+.scenario p{margin:0;font-size:.95rem}
+.note{background:var(--warn-soft);border-left:3px solid var(--warn);padding:10px 14px;border-radius:6px;margin:16px 0}
+.note.info{background:var(--accent-soft);border-color:var(--accent)}
+.pill{display:inline-block;font-size:.75rem;padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:var(--text2);white-space:nowrap}
+.pill.lic{border-color:var(--accent);color:var(--accent)}
+.pill.off{border-color:var(--ok);color:var(--ok)}
+.theme-toggle{float:right;font:inherit;font-size:.85rem;background:var(--surface);color:var(--text2);border:1px solid var(--line);border-radius:999px;padding:4px 12px;cursor:pointer}
+svg .fg{fill:currentColor}
+svg .st{stroke:currentColor;fill:none}
+svg .box{fill:var(--surface);stroke:currentColor}
+svg .soft{fill:var(--soft);stroke:var(--line)}
+svg .acc{fill:var(--accent)}
+svg .accst{stroke:var(--accent);fill:none}
+svg .accbox{fill:var(--accent-soft);stroke:var(--accent)}
+svg .warnst{stroke:var(--warn);fill:none}
+svg .warnbox{fill:var(--warn-soft);stroke:var(--warn)}
+svg .warn{fill:var(--warn)}
+svg .okbox{fill:var(--ok-soft);stroke:var(--ok)}
+svg .ok{fill:var(--ok)}
+svg .mut{fill:var(--muted)}
+svg text{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:13px;fill:currentColor}
+svg text.s{font-size:11.5px}
+svg text.b{font-weight:600}
+svg text.m{fill:var(--muted)}
+@page{size:A4;margin:14mm 13mm 16mm}
+@media print{
+  :root,:root[data-theme="dark"]{--bg:#fff;--surface:#fff;--text:#1d1f22;--text2:#4a4f57;--muted:#6b717a;--line:#d9d6cf;--soft:#f1efe9;--accent:#1f6fb2;--accent-soft:#dcebf7;--warn:#b4472b;--warn-soft:#f6e1da;--ok:#2f7d4f;--ok-soft:#dcefe3;--code:#f3f1ec}
+  body{font-size:10.5pt;line-height:1.5;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  main{max-width:none;padding:0}
+  .theme-toggle{display:none}
+  h2{margin-top:28px}
+  h2,h3{break-after:avoid}
+  figure{overflow:visible;break-inside:avoid}
+  figure svg{min-width:0}
+  table,tr,.scenario,.cards .card,.note,pre{break-inside:avoid}
+  .scroll-x{overflow:visible}
+  pre{white-space:pre-wrap;overflow:visible}
+  a{color:var(--accent);text-decoration:none}
+  .repo a::after{content:none}
+}
+</style>
+</head>
+<body>
+<main>
+<header class="hero">
+  <button class="theme-toggle" type="button" id="theme">Theme</button>
+  <p class="kicker">Helixor Solver example · guide</p>
+  <h1>Ocean container routing, explained</h1>
+  <p class="lede">An importer has 232 containers to move from three Chinese ports to two US ports over six weeks, on four carriers. This guide walks through the business problems that planning raises, shows each one as a scenario, and explains how the hosted Helixor Solver handles it. Every number is measured, and you can reproduce it from this repository.</p>
+  <p class="repo">Repository: <a href="https://github.com/HelixorAI/helixor-solver-ocean-container-routing">github.com/HelixorAI/helixor-solver-ocean-container-routing</a></p>
+</header>
+
+<nav class="toc" aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#problem">The business problem</a></li>
+    <li><a href="#goals">What a good plan means</a></li>
+    <li><a href="#model">How the problem is modelled</a></li>
+    <li><a href="#flow">How a plan is made and trusted</a></li>
+    <li><a href="#s-initial">Scenario: the first plan</a></li>
+    <li><a href="#s-adopt">Scenario: taking over another system's plan</a></li>
+    <li><a href="#s-repair">Scenario: the week goes wrong</a></li>
+    <li><a href="#s-pins">Scenario: deciding what may change</a></li>
+    <li><a href="#s-space">Scenario: asking carriers for more space</a></li>
+    <li><a href="#s-surge">Scenario: a peak-season surge</a></li>
+    <li><a href="#results">How good are the plans?</a></li>
+    <li><a href="#run">Run it yourself</a></li>
+    <li><a href="#glossary">Glossary</a></li>
+  </ol>
+</nav>
+
+<!-- 1 -->
+<h2 id="problem">1. The business problem</h2>
+<p>An importer buys goods from vendors in China and ships them to the US in containers. It doesn't own ships. It books space on <strong>sailings</strong>: one voyage of one carrier's service, leaving on a fixed day each week. In this example, four carriers run eight weekly services on three <strong>lanes</strong> (a lane is a port pair).</p>
+
+<figure>
+<svg viewBox="0 0 760 300" role="img" aria-label="Three lanes: Shanghai to Los Angeles on three carriers, Yantian to Los Angeles on two, Ningbo to Savannah on three.">
+  <defs><marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+  <text x="90" y="24" text-anchor="middle" class="b">Origin ports</text>
+  <text x="670" y="24" text-anchor="middle" class="b">Destination ports</text>
+  <rect class="box" x="20" y="50" width="140" height="50" rx="8"/><text x="90" y="72" text-anchor="middle" class="b">Shanghai</text><text x="90" y="90" text-anchor="middle" class="s m">CNSHA · 103 boxes</text>
+  <rect class="box" x="20" y="130" width="140" height="50" rx="8"/><text x="90" y="152" text-anchor="middle" class="b">Yantian</text><text x="90" y="170" text-anchor="middle" class="s m">CNYTN · 57 boxes</text>
+  <rect class="box" x="20" y="220" width="140" height="50" rx="8"/><text x="90" y="242" text-anchor="middle" class="b">Ningbo</text><text x="90" y="260" text-anchor="middle" class="s m">CNNGB · 72 boxes</text>
+  <rect class="box" x="600" y="90" width="140" height="50" rx="8"/><text x="670" y="112" text-anchor="middle" class="b">Los Angeles</text><text x="670" y="130" text-anchor="middle" class="s m">USLAX</text>
+  <rect class="box" x="600" y="220" width="140" height="50" rx="8"/><text x="670" y="242" text-anchor="middle" class="b">Savannah</text><text x="670" y="260" text-anchor="middle" class="s m">USSAV</text>
+  <path class="st" d="M160 75 C 380 75, 420 105, 598 108" marker-end="url(#ar1)"/>
+  <text x="380" y="68" text-anchor="middle" class="s">Atlas PSX · Borealis TP1 · Cobalt CPX</text>
+  <path class="st" d="M160 155 C 380 155, 420 125, 598 122" marker-end="url(#ar1)"/>
+  <text x="380" y="168" text-anchor="middle" class="s">Borealis TP2 · Dorado DPS</text>
+  <path class="st" d="M160 245 L 598 245" marker-end="url(#ar1)"/>
+  <text x="380" y="238" text-anchor="middle" class="s">Atlas AEX · Cobalt SVX · Dorado DEC</text>
+  <text x="380" y="290" text-anchor="middle" class="s m">each service sails once a week · 8 services × 8 weeks = 64 sailings</text>
+</svg>
+<figcaption>The network. Each arrow is a lane, labelled with the carrier services that sail it. A container can only sail on its own lane. The carriers and vendors are invented; the ports are real.</figcaption>
+</figure>
+
+<p>Four things make the booking hard:</p>
+<div class="cards">
+  <div class="card"><h4>Contracted space</h4><p>Each carrier grants a weekly <strong>allocation</strong> on each sailing, for example 6 FEU. The importer has committed to it, so space it doesn't fill is money lost.</p></div>
+  <div class="card"><h4>Spot space</h4><p>Beyond the allocation a carrier may sell extra <strong>spot</strong> space at a higher rate, but only up to a limit, and only if it agrees.</p></div>
+  <div class="card"><h4>Promise dates</h4><p>Each container has a date its customer was promised. A sailing that arrives after it makes the container late.</p></div>
+  <div class="card"><h4>Constant change</h4><p>Sailings are blanked or delayed, cargo is late, vendors add orders, carriers cut allocations or refuse extra space. The plan has to be repaired without re-booking everything.</p></div>
+</div>
+<p>Sizes are counted in <strong>FEU</strong> (forty-foot equivalent units): a 40-foot container is 1 FEU, a 20-foot container is 0.5 FEU. The example has 155 40' high-cubes, 39 40' standard containers and 38 20' containers, and 224 FEU of allocation on the sailings of weeks 0 to 6.</p>
+
+<!-- 2 -->
+<h2 id="goals">2. What a good plan means</h2>
+<p>The business ranks its goals. The solver needs them as prices in one currency, so each goal becomes a weight per unit of shortfall. A higher goal gets a weight large enough that no amount of a lower goal can outweigh it in practice.</p>
+
+<figure>
+<svg viewBox="0 0 760 250" role="img" aria-label="Goals in priority order with their weights: late container 1000, unused allocation 100 per FEU, spot 40 per FEU, unacknowledged space 30 per FEU, new space request 10 per FEU, day late 5.">
+  <g>
+    <rect class="accbox" x="20" y="14" width="720" height="34" rx="6"/>
+    <text x="36" y="36" class="b">1 · Deliver on time</text><text x="470" y="36" class="s">1,000 per late container  +  5 per day late</text>
+    <rect class="box" x="60" y="58" width="680" height="34" rx="6"/>
+    <text x="76" y="80" class="b">2 · Use the allocation you've paid for</text><text x="470" y="80" class="s">100 per FEU of allocation left empty</text>
+    <rect class="box" x="100" y="102" width="640" height="34" rx="6"/>
+    <text x="116" y="124" class="b">3 · Buy as little spot as possible</text><text x="470" y="124" class="s">40 per FEU beyond the allocation</text>
+    <rect class="box" x="140" y="146" width="600" height="34" rx="6"/>
+    <text x="156" y="168" class="b">4 · Rely on space the carrier confirmed</text><text x="470" y="168" class="s">30 per FEU not yet confirmed</text>
+    <rect class="box" x="180" y="190" width="560" height="34" rx="6"/>
+    <text x="196" y="212" class="b">5 · Ask carriers for less</text><text x="470" y="212" class="s">10 per FEU needing a new request</text>
+  </g>
+  <text x="20" y="244" class="s m">Hard rules (never broken): right lane · cargo ready by cutoff · within the space on sale</text>
+</svg>
+<figcaption>The objective. Lower in the list means cheaper, so the solver gives it up first. The numbers are the weights in the pack's manifest; a test checks that the independent scorer uses the same ones.</figcaption>
+</figure>
+
+<p>Why 100 for unused allocation and only 40 for spot? Allocation is paid for whether used or not, so leaving it empty and buying spot elsewhere is the worst of both. If your contracts work the other way, swap them; the weights are configuration, not code.</p>
+
+<!-- 3 -->
+<h2 id="model">3. How the problem is modelled</h2>
+<p>The decision is simple to state: <strong>for each container, pick one sailing</strong>. It is bin packing (sailings are bins of limited space) combined with scheduling (each bin leaves and arrives on a fixed day).</p>
+
+<figure>
+<svg viewBox="0 0 760 300" role="img" aria-label="One sailing as a bin: allocation of 6 FEU at the bottom, 4 FEU of spot on sale above it, containers of 1 and 0.5 FEU stacked inside.">
+  <text x="40" y="22" class="b">One sailing: ATLS-PSX-W00</text>
+  <!-- capacity frame -->
+  <rect x="80" y="40" width="150" height="240" class="st" stroke-dasharray="5 4"/>
+  <rect x="80" y="136" width="150" height="144" class="accbox"/>
+  <!-- containers: scale 24px per FEU; allocation 6 FEU = 144px from y=280 to 136 -->
+  <g>
+    <rect class="box" x="92" y="258" width="126" height="20" rx="3"/><text x="155" y="272" text-anchor="middle" class="s">40' · 1 FEU</text>
+    <rect class="box" x="92" y="234" width="126" height="20" rx="3"/><text x="155" y="248" text-anchor="middle" class="s">40' · 1 FEU</text>
+    <rect class="box" x="92" y="210" width="60" height="20" rx="3"/><text x="122" y="224" text-anchor="middle" class="s">20'</text>
+    <rect class="box" x="158" y="210" width="60" height="20" rx="3"/><text x="188" y="224" text-anchor="middle" class="s">20'</text>
+    <rect class="box" x="92" y="186" width="126" height="20" rx="3"/><text x="155" y="200" text-anchor="middle" class="s">40' · 1 FEU</text>
+    <rect class="box" x="92" y="162" width="126" height="20" rx="3"/><text x="155" y="176" text-anchor="middle" class="s">40' · 1 FEU</text>
+    <rect class="box" x="92" y="138" width="126" height="20" rx="3"/><text x="155" y="152" text-anchor="middle" class="s">40' · 1 FEU</text>
+    <rect class="warnbox" x="92" y="114" width="126" height="20" rx="3"/><text x="155" y="128" text-anchor="middle" class="s">40' · spot</text>
+  </g>
+  <line x1="70" y1="136" x2="240" y2="136" class="accst" stroke-width="2"/>
+  <line x1="70" y1="40" x2="240" y2="40" class="st" stroke-width="2"/>
+  <text x="250" y="140" class="s b">allocation: 6 FEU</text>
+  <text x="250" y="156" class="s m">below the line costs nothing; empty space costs 100/FEU</text>
+  <text x="250" y="44" class="s b">space on sale: 10 FEU</text>
+  <text x="250" y="60" class="s m">allocation + 4 FEU of spot; above this is not allowed</text>
+  <text x="250" y="96" class="s">between the lines: spot, 40/FEU</text>
+  <text x="250" y="112" class="s m">this sailing carries 7 FEU: 6 in allocation, 1 as spot</text>
+  <!-- timing -->
+  <text x="430" y="200" class="b">Will this container make it?</text>
+  <line x1="430" y1="250" x2="740" y2="250" class="st"/>
+  <g class="s">
+    <circle cx="450" cy="250" r="4" class="fg"/><text x="450" y="236" text-anchor="middle" class="s">ready</text>
+    <circle cx="518" cy="250" r="4" class="acc"/><text x="518" y="236" text-anchor="middle" class="s">cutoff</text>
+    <circle cx="586" cy="250" r="4" class="fg"/><text x="586" y="236" text-anchor="middle" class="s">departs</text>
+    <circle cx="654" cy="250" r="4" class="fg"/><text x="654" y="236" text-anchor="middle" class="s">arrives</text>
+    <circle cx="722" cy="250" r="4" class="ok"/><text x="722" y="236" text-anchor="middle" class="s">promise</text>
+  </g>
+  <text x="430" y="274" class="s">ready ≤ cutoff → it may sail (a hard rule)</text>
+  <text x="430" y="290" class="s">arrives ≤ promise → on time (worth 1,000)</text>
+</svg>
+<figcaption>Left: a sailing is a bin with two lines. Filling up to the allocation is free; leaving it empty is the second-most expensive thing a plan can do. Space above the allocation is spot, up to the limit on sale. Right: a container can use a sailing only if its cargo is ready by the sailing's cutoff, and it is on time only if the sailing arrives by its promise date.</figcaption>
+</figure>
+
+<p>All of this is declared, not programmed. The <strong>solver pack</strong> (<code>pack/</code>) is a zip of configuration: a manifest naming the decision (containers onto sailings), eight rules, and their weights. Each rule uses a generic contract, such as "an attribute of the container equals an attribute of the sailing" for the lane rule, or "the sum of FEU on a sailing stays below its capacity" for space. The solver has no ocean-shipping code. Your side does the <strong>lowering</strong>: it turns your records into the request, for example by working out, for each container, which sailings arrive on time.</p>
+
+<!-- 4 -->
+<h2 id="flow">4. How a plan is made and trusted</h2>
+<figure>
+<svg viewBox="0 0 760 250" role="img" aria-label="Your records are lowered into a request, sent to the hosted solver with the pack, which returns a plan and a certificate; the independent scorer checks it; the plan is accepted only if all checks agree.">
+  <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+  <rect class="box" x="10" y="40" width="130" height="60" rx="8"/><text x="75" y="66" text-anchor="middle" class="b">Your records</text><text x="75" y="84" text-anchor="middle" class="s m">containers, sailings</text>
+  <rect class="box" x="190" y="40" width="130" height="60" rx="8"/><text x="255" y="66" text-anchor="middle" class="b">Lowering</text><text x="255" y="84" text-anchor="middle" class="s m">lowering.py</text>
+  <rect class="accbox" x="380" y="30" width="170" height="80" rx="8"/><text x="465" y="58" text-anchor="middle" class="b">Hosted Helixor Solver</text><text x="465" y="76" text-anchor="middle" class="s">runs the pack's rules</text><text x="465" y="94" text-anchor="middle" class="s m">needs a license</text>
+  <rect class="box" x="610" y="40" width="140" height="60" rx="8"/><text x="680" y="66" text-anchor="middle" class="b">Plan + certificate</text><text x="680" y="84" text-anchor="middle" class="s m">penalty per rule</text>
+  <line x1="140" y1="70" x2="188" y2="70" class="st" marker-end="url(#ar2)"/>
+  <line x1="320" y1="70" x2="378" y2="70" class="st" marker-end="url(#ar2)"/><text x="349" y="62" text-anchor="middle" class="s">request</text>
+  <line x1="550" y1="70" x2="608" y2="70" class="st" marker-end="url(#ar2)"/><text x="579" y="62" text-anchor="middle" class="s">answer</text>
+  <rect class="soft" x="380" y="140" width="170" height="40" rx="8"/><text x="465" y="165" text-anchor="middle" class="s">pack: manifest + rules</text>
+  <line x1="465" y1="140" x2="465" y2="112" class="st" marker-end="url(#ar2)"/><text x="472" y="130" class="s">published once</text>
+  <rect class="box" x="610" y="140" width="140" height="50" rx="8"/><text x="680" y="162" text-anchor="middle" class="b">Independent scorer</text><text x="680" y="180" text-anchor="middle" class="s m">scorer.py</text>
+  <line x1="680" y1="100" x2="680" y2="138" class="st" marker-end="url(#ar2)"/><text x="688" y="124" class="s">re-checks</text>
+  <rect class="okbox" x="520" y="210" width="100" height="32" rx="6"/><text x="570" y="231" text-anchor="middle" class="s b">accepted</text>
+  <rect class="warnbox" x="630" y="210" width="125" height="32" rx="6"/><text x="692" y="231" text-anchor="middle" class="s b">fails, with reasons</text>
+  <line x1="655" y1="190" x2="590" y2="208" class="st" marker-end="url(#ar2)"/>
+  <line x1="690" y1="190" x2="692" y2="208" class="st" marker-end="url(#ar2)"/>
+  <text x="10" y="160" class="s">An HTTP 200 alone is never enough. The plan is accepted only</text>
+  <text x="10" y="176" class="s">when the certificate says feasible, every container is placed,</text>
+  <text x="10" y="192" class="s">and the scorer, written separately from the records, agrees.</text>
+</svg>
+<figcaption>The trust path. The <strong>certificate</strong> is the solver's own account of the plan: feasible or not, and the penalty of each rule. The <strong>independent scorer</strong> reimplements the business rules directly from your records without the solver. If they disagree, the command stops; it never passes on a plan it couldn't verify.</figcaption>
+</figure>
+
+<!-- 5 -->
+<h2 id="s-initial">5. Scenario: the first plan</h2>
+<div class="scenario">
+  <div class="biz"><b>Business</b><p>It's Monday of week 0. All 232 containers need a sailing for the next six weeks.</p></div>
+  <div class="solver"><b>Solver</b><p>One request with every container and sailing, no prior plan. It searches for the cheapest assignment that breaks no hard rule.</p></div>
+  <div class="see"><b>You see</b><p>A feasible plan: 193 of 232 on time, 92% of the allocation used, 6.5–7.5 FEU of spot.</p></div>
+</div>
+<div class="scroll-x"><table>
+  <thead><tr><th>Engine</th><th class="n">Penalty</th><th class="n">Late (days)</th><th class="n">Allocation used</th><th class="n">Spot FEU</th><th class="n">Time</th></tr></thead>
+  <tbody>
+    <tr><td>Exact MIP (proven optimum)</td><td class="n">42,740</td><td class="n">39 (294)</td><td class="n">92.2%</td><td class="n">6.5</td><td class="n">0.2 s</td></tr>
+    <tr class="hi"><td><strong>Helixor solver (next release)</strong></td><td class="n">42,920</td><td class="n">39 (294)</td><td class="n">91.7%</td><td class="n">7.5</td><td class="n">4.5 s</td></tr>
+  </tbody>
+</table></div>
+<p>Both deliver the same 193 containers on time, the top goal. The Helixor plan is 0.4% above the proven optimum on total penalty. Why are 39 containers late in every plan? No sailing on their lane arrives before their promise date, so no plan can save them; the solver still chooses the sailing that makes them least late.</p>
+
+<!-- 6 -->
+<h2 id="s-adopt">6. Scenario: taking over another system's plan</h2>
+<div class="scenario">
+  <div class="biz"><b>Business</b><p>The importer already plans with another tool. It wants Helixor to take over from that plan, not start again.</p></div>
+  <div class="solver"><b>Solver</b><p>The plan goes in with every booking <em>frozen</em>. The solver judges it under the pack's rules and moves nothing.</p></div>
+  <div class="see"><b>You see</b><p>The plan certified at the same penalty the scorer gives (42,780), or a refusal that names the broken rule and sailing.</p></div>
+</div>
+<figure>
+<svg viewBox="0 0 760 184" role="img" aria-label="Adopting a plan: three checks in a row, ids, independent score, hosted certificate with everything frozen; any failure stops with reasons.">
+  <defs><marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+  <rect class="box" x="10" y="30" width="120" height="56" rx="8"/><text x="70" y="54" text-anchor="middle" class="b">Other system's</text><text x="70" y="72" text-anchor="middle" class="b">plan</text>
+  <rect class="box" x="170" y="30" width="150" height="56" rx="8"/><text x="245" y="54" text-anchor="middle" class="b">1. Ids</text><text x="245" y="72" text-anchor="middle" class="s m">all known, all booked</text>
+  <rect class="box" x="360" y="30" width="150" height="56" rx="8"/><text x="435" y="54" text-anchor="middle" class="b">2. Scorer</text><text x="435" y="72" text-anchor="middle" class="s m">feasible?</text>
+  <rect class="accbox" x="550" y="30" width="200" height="56" rx="8"/><text x="650" y="54" text-anchor="middle" class="b">3. Hosted, all frozen</text><text x="650" y="72" text-anchor="middle" class="s">certificate, nothing moved</text>
+  <line x1="130" y1="58" x2="168" y2="58" class="st" marker-end="url(#ar3)"/>
+  <line x1="320" y1="58" x2="358" y2="58" class="st" marker-end="url(#ar3)"/>
+  <line x1="510" y1="58" x2="548" y2="58" class="st" marker-end="url(#ar3)"/>
+  <g class="s"><line x1="245" y1="86" x2="245" y2="118" class="warnst" marker-end="url(#ar3)"/><line x1="435" y1="86" x2="435" y2="118" class="warnst" marker-end="url(#ar3)"/><line x1="650" y1="86" x2="650" y2="118" class="warnst" marker-end="url(#ar3)"/></g>
+  <rect class="warnbox" x="170" y="120" width="580" height="52" rx="6"/>
+  <text x="460" y="141" text-anchor="middle" class="s">stops with the offenders: unknown or missing ids, rule violations,</text>
+  <text x="460" y="160" text-anchor="middle" class="s">or <tspan class="b">422 pinned_set_infeasible</tspan> naming the rule and the sailing</text>
+</svg>
+<figcaption>Adoption never quietly fixes a broken plan. If the frozen bookings alone break a hard rule (wrong lane, cargo not ready, a sailing over capacity), the solver refuses and says which. Once adopted, the plan is the starting point for everything that follows.</figcaption>
+</figure>
+<p>Bring the plan as <code>{"bookings": [{"container": …, "sailing": …}]}</code> or <code>{"placements": [{"entity": …, "group": …}]}</code>. The example adopts the exact MIP's plan, standing in for the other system.</p>
+
+<!-- 7 -->
+<h2 id="s-repair">7. Scenario: the week goes wrong</h2>
+<p>Plans don't survive the week. Every few days the planner rolls the clock forward, applies what happened, and asks for a <strong>repair</strong>: a new plan that fixes what broke and moves as little else as possible. The example replays five cycles over the first three weeks.</p>
+
+<figure>
+<svg viewBox="0 0 760 236" role="img" aria-label="Timeline of five planning cycles on days 3, 8, 15, 17 and 19 with the events of each.">
+  <line x1="30" y1="60" x2="740" y2="60" class="st" stroke-width="2"/>
+  <g>
+    <circle cx="80" cy="60" r="7" class="acc"/><text x="80" y="38" text-anchor="middle" class="b">Day 3</text>
+    <text x="22" y="90" class="s">a sailing blanked</text><text x="22" y="106" class="s">(6 boxes adrift)</text><text x="22" y="122" class="s">5 boxes added</text><text x="22" y="138" class="s">1 expedite</text><text x="22" y="154" class="s">allocation +2 FEU</text>
+    <circle cx="225" cy="60" r="7" class="acc"/><text x="225" y="38" text-anchor="middle" class="b">Day 8</text>
+    <text x="170" y="90" class="s">a sailing delayed 5 d</text><text x="170" y="106" class="s">a box rolled</text><text x="170" y="122" class="s">2 cargo slips</text><text x="170" y="138" class="s">1 cancelled, 1 resized</text><text x="170" y="154" class="s">allocation −2 FEU</text>
+    <circle cx="380" cy="60" r="7" class="acc"/><text x="380" y="38" text-anchor="middle" class="b">Day 15</text>
+    <text x="330" y="90" class="s">spot sold out</text><text x="330" y="106" class="s">on one sailing</text><text x="330" y="122" class="s">planner locks a box</text><text x="330" y="138" class="s">4 boxes added</text>
+    <circle cx="525" cy="60" r="9" class="warn"/><text x="525" y="38" text-anchor="middle" class="b">Day 17</text>
+    <text x="478" y="90" class="s b">surge: +10 FEU</text><text x="478" y="106" class="s">Shanghai → LA,</text><text x="478" y="122" class="s">on a 14 FEU weekly</text><text x="478" y="138" class="s">allocation</text>
+    <circle cx="670" cy="60" r="7" class="acc"/><text x="670" y="38" text-anchor="middle" class="b">Day 19</text>
+    <text x="622" y="90" class="s">carriers answer:</text><text x="622" y="106" class="s">5 FEU confirmed,</text><text x="622" y="122" class="s">6 FEU rejected</text><text x="622" y="138" class="s">a surge box slips</text>
+  </g>
+  <text x="22" y="196" class="s m">Carrier events: blank, delay, roll, allocation and spot changes, answers to space requests.</text>
+  <text x="22" y="214" class="s m">Vendor events: added, cancelled, expedited, cargo slips, size changes. Planner events: locks.</text>
+</svg>
+<figcaption>The replay in <code>data/events/replay.json</code>. Each event is validated; one that names an unknown sailing or container is refused, not skipped.</figcaption>
+</figure>
+
+<h3>One cycle, step by step</h3>
+<figure>
+<svg viewBox="0 0 760 240" role="img" aria-label="The repair loop: advance the clock, take carrier answers, apply events, score the old plan, repair with pins, tell the carriers, then the next cycle.">
+  <defs><marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+  <g>
+    <rect class="box" x="10" y="20" width="170" height="56" rx="8"/><text x="95" y="44" text-anchor="middle" class="b">1. Advance the clock</text><text x="95" y="62" text-anchor="middle" class="s m">departed sailings leave</text>
+    <rect class="box" x="200" y="20" width="170" height="56" rx="8"/><text x="285" y="44" text-anchor="middle" class="b">2. Carrier answers</text><text x="285" y="62" text-anchor="middle" class="s m">confirm / reject space</text>
+    <rect class="box" x="390" y="20" width="170" height="56" rx="8"/><text x="475" y="44" text-anchor="middle" class="b">3. Apply events</text><text x="475" y="62" text-anchor="middle" class="s m">validated, or refused</text>
+    <rect class="warnbox" x="580" y="20" width="170" height="56" rx="8"/><text x="665" y="44" text-anchor="middle" class="b">4. Score old plan</text><text x="665" y="62" text-anchor="middle" class="s">broken: 3–14 violations</text>
+    <rect class="accbox" x="390" y="140" width="360" height="56" rx="8"/><text x="570" y="164" text-anchor="middle" class="b">5. One repair request, with pins</text><text x="570" y="182" text-anchor="middle" class="s">frozen · forbid · prefer at change cost 25 · free</text>
+    <rect class="box" x="10" y="140" width="360" height="56" rx="8"/><text x="190" y="164" text-anchor="middle" class="b">6. Tell the carriers</text><text x="190" y="182" text-anchor="middle" class="s m">request · hold · release space</text>
+  </g>
+  <line x1="180" y1="48" x2="198" y2="48" class="st" marker-end="url(#ar4)"/>
+  <line x1="370" y1="48" x2="388" y2="48" class="st" marker-end="url(#ar4)"/>
+  <line x1="560" y1="48" x2="578" y2="48" class="st" marker-end="url(#ar4)"/>
+  <path d="M665 76 L665 138" class="st" marker-end="url(#ar4)"/>
+  <line x1="390" y1="168" x2="372" y2="168" class="st" marker-end="url(#ar4)"/>
+  <path d="M95 140 L95 78" class="st" marker-end="url(#ar4)"/><text x="102" y="112" class="s">next cycle</text>
+  <text x="10" y="226" class="s m">Every repair in the replay comes back feasible, and the independent scorer confirms it.</text>
+</svg>
+<figcaption>The loop the <code>continuous</code> command runs. The old plan is always broken when an event lands; the repair makes it valid again.</figcaption>
+</figure>
+
+<h3>Which containers may move?</h3>
+<p>Moving a container means re-booking it with a carrier, so the repair request carries a <strong>pin</strong> for every container. The replan policy chooses them:</p>
+<div class="scroll-x"><table>
+  <thead><tr><th>Container</th><th>Pin</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td>Locked by a planner</td><td><code>frozen</code></td><td>an explicit decision</td></tr>
+    <tr><td>Sailing's cutoff within 7 days, in confirmed space</td><td><code>frozen</code></td><td>already booked with the carrier</td></tr>
+    <tr><td>Rolled off a sailing</td><td><code>forbid</code> that sailing</td><td>the carrier won't take it</td></tr>
+    <tr><td>Touched by an event (blank, delay, slip, expedite, new)</td><td>none (free)</td><td>must be re-planned</td></tr>
+    <tr><td>Everything else</td><td><code>prefer</code>, change cost 25</td><td>stays unless moving gains more than 25</td></tr>
+  </tbody>
+</table></div>
+<p>A change cost of 25 means: move a container if that saves a late delivery (1,000) or fills a FEU of empty allocation (100), but not to shave four days off a container that is late anyway (4 × 5 = 20).</p>
+
+<!-- 8 -->
+<h2 id="s-pins">8. Scenario: deciding what may change</h2>
+<div class="scenario">
+  <div class="biz"><b>Business</b><p>A carrier blanks one sailing (BORS-TP1-W01), and 5 containers lose their booking. How much of the rest of the plan should move?</p></div>
+  <div class="solver"><b>Solver</b><p>The same repair, run once per pin choice. Every pin is checked against the plan that comes back.</p></div>
+  <div class="see"><b>You see</b><p>The change cost works as a churn dial, and impossible pins are refused before any search.</p></div>
+</div>
+
+<figure>
+<svg viewBox="0 0 760 210" role="img" aria-label="What each pin mode allows: frozen stays on its sailing, forbid can go anywhere except one sailing, prefer stays unless a move gains more than the change cost, free can go anywhere.">
+  <defs><marker id="ar5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+  <g>
+    <text x="95" y="22" text-anchor="middle" class="b">frozen</text>
+    <text x="285" y="22" text-anchor="middle" class="b">forbid</text>
+    <text x="475" y="22" text-anchor="middle" class="b">prefer</text>
+    <text x="665" y="22" text-anchor="middle" class="b">free</text>
+  </g>
+  <!-- each panel: three sailings A B C as boxes, container start on A -->
+  <g>
+    <rect class="accbox" x="35" y="40" width="50" height="40" rx="5"/><text x="60" y="65" text-anchor="middle" class="s">A</text>
+    <rect class="soft" x="35" y="100" width="50" height="40" rx="5"/><text x="60" y="125" text-anchor="middle" class="s m">B</text>
+    <rect class="soft" x="105" y="100" width="50" height="40" rx="5"/><text x="130" y="125" text-anchor="middle" class="s m">C</text>
+    <text x="95" y="166" text-anchor="middle" class="s">stays on A</text>
+    <text x="95" y="182" text-anchor="middle" class="s m">booked; a planner lock</text>
+  </g>
+  <g>
+    <rect class="warnbox" x="225" y="40" width="50" height="40" rx="5"/><text x="250" y="65" text-anchor="middle" class="s">A ✕</text>
+    <rect class="soft" x="225" y="100" width="50" height="40" rx="5"/><text x="250" y="125" text-anchor="middle" class="s">B</text>
+    <rect class="soft" x="295" y="100" width="50" height="40" rx="5"/><text x="320" y="125" text-anchor="middle" class="s">C</text>
+    <line x1="255" y1="82" x2="252" y2="98" class="st" marker-end="url(#ar5)"/><line x1="268" y1="82" x2="310" y2="98" class="st" marker-end="url(#ar5)"/>
+    <text x="285" y="166" text-anchor="middle" class="s">anywhere but A</text>
+    <text x="285" y="182" text-anchor="middle" class="s m">the carrier refused A</text>
+  </g>
+  <g>
+    <rect class="accbox" x="415" y="40" width="50" height="40" rx="5"/><text x="440" y="65" text-anchor="middle" class="s">A</text>
+    <rect class="soft" x="415" y="100" width="50" height="40" rx="5"/><text x="440" y="125" text-anchor="middle" class="s">B</text>
+    <rect class="soft" x="485" y="100" width="50" height="40" rx="5"/><text x="510" y="125" text-anchor="middle" class="s">C</text>
+    <line x1="452" y1="82" x2="500" y2="98" class="st" stroke-dasharray="4 3" marker-end="url(#ar5)"/><text x="505" y="78" class="s">gain &gt; 25?</text>
+    <text x="475" y="166" text-anchor="middle" class="s">A, unless a move pays</text>
+    <text x="475" y="182" text-anchor="middle" class="s m">everything stable</text>
+  </g>
+  <g>
+    <rect class="soft" x="605" y="40" width="50" height="40" rx="5"/><text x="630" y="65" text-anchor="middle" class="s">A</text>
+    <rect class="soft" x="605" y="100" width="50" height="40" rx="5"/><text x="630" y="125" text-anchor="middle" class="s">B</text>
+    <rect class="soft" x="675" y="100" width="50" height="40" rx="5"/><text x="700" y="125" text-anchor="middle" class="s">C</text>
+    <text x="665" y="166" text-anchor="middle" class="s">anywhere</text>
+    <text x="665" y="182" text-anchor="middle" class="s m">an event touched it</text>
+  </g>
+</svg>
+<figcaption>The four pin modes for a container planned on sailing A. Hard rules still apply in every mode: a container can never go to a sailing on another lane or after its cutoff.</figcaption>
+</figure>
+
+<figure>
+<svg viewBox="0 0 760 230" role="img" aria-label="Containers moved by pin choice: no prior plan 66, prefer at change cost 0 7, at 25 6, at 1000 5.">
+  <text x="20" y="22" class="b">Containers moved, by pin choice</text>
+  <g>
+    <text x="210" y="62" text-anchor="end" class="s">no prior plan</text>
+    <rect x="220" y="48" width="460" height="20" rx="3" class="mut"/><text x="688" y="63" class="s b">66</text>
+    <text x="210" y="102" text-anchor="end" class="s">prefer, change cost 0</text>
+    <rect x="220" y="88" width="49" height="20" rx="3" class="acc" opacity=".55"/><text x="277" y="103" class="s b">7</text>
+    <text x="210" y="142" text-anchor="end" class="s">prefer, change cost 25</text>
+    <rect x="220" y="128" width="42" height="20" rx="3" class="acc"/><text x="270" y="143" class="s b">6</text>
+    <text x="210" y="182" text-anchor="end" class="s">prefer, change cost 1000</text>
+    <rect x="220" y="168" width="35" height="20" rx="3" class="acc"/><text x="263" y="183" class="s b">5</text>
+  </g>
+  <line x1="220" y1="40" x2="220" y2="196" class="st" stroke-opacity=".4"/>
+  <text x="20" y="220" class="s m">At 1000 only the 5 containers the blank displaced move, and the plan matches the optimum for those pins (44,115).</text>
+</svg>
+<figcaption>The change cost is the churn dial. Re-planning from scratch moves 66 containers. Keeping the prior plan as a preference moves 6–7 and scores better (44,025); at 1000 only the 5 that had to move do, for 90 more penalty.</figcaption>
+</figure>
+
+<div class="scroll-x"><table>
+  <thead><tr><th>Pins</th><th>Outcome</th><th class="n">Penalty</th><th class="n">Moved</th><th class="n">Optimum, same pins</th></tr></thead>
+  <tbody>
+    <tr><td>no prior plan</td><td>feasible</td><td class="n">44,105</td><td class="n">66</td><td class="n">43,985</td></tr>
+    <tr><td>all prefer, change cost 0</td><td>feasible</td><td class="n">44,025</td><td class="n">7</td><td class="n">43,985</td></tr>
+    <tr><td>all prefer, change cost 25</td><td>feasible</td><td class="n">44,025</td><td class="n">6</td><td class="n">44,025</td></tr>
+    <tr><td>all prefer, change cost 1000</td><td>feasible</td><td class="n">44,115</td><td class="n">5</td><td class="n">44,115</td></tr>
+    <tr><td>19 week-0 bookings frozen</td><td>feasible, pins held</td><td class="n">44,045</td><td class="n">6</td><td class="n">44,045</td></tr>
+    <tr><td>3 containers forbidden COBT-CPX-W01</td><td>feasible, pins held</td><td class="n">44,045</td><td class="n">10</td><td class="n">44,025</td></tr>
+    <tr><td>11 FEU frozen onto ATLS-PSX-W01 (10 FEU on sale)</td><td><strong>refused</strong>: 422 <code>pinned_set_infeasible</code>, sailing_capacity in ATLS-PSX-W01</td><td class="n">–</td><td class="n">–</td><td class="n">–</td></tr>
+  </tbody>
+</table></div>
+
+<!-- 9 -->
+<h2 id="s-space">9. Scenario: asking carriers for more space</h2>
+<p>The allocation is a contract, so the carrier has already agreed to it. Anything beyond it is a request. The importer can <strong>over-allocate</strong>, asking for more than the allocation and seeing if the carrier accepts, often through the carrier's booking website. The carrier may say no. And when space is freed up, a planner doesn't necessarily hand it back, because a later change may need it.</p>
+
+<figure>
+<svg viewBox="0 0 760 266" role="img" aria-label="The space lifecycle: a request makes space pending; the carrier confirms or rejects it; confirmed space no longer needed is held and can be reused; held space is released close to cutoff; a rejection caps the sailing; a pending request no longer needed is withdrawn near cutoff.">
+  <defs><marker id="ar6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+  <rect class="soft" x="10" y="95" width="100" height="50" rx="25"/><text x="60" y="125" text-anchor="middle" class="b">needed</text>
+  <rect class="box" x="170" y="95" width="130" height="50" rx="25"/><text x="235" y="116" text-anchor="middle" class="b">pending</text><text x="235" y="133" text-anchor="middle" class="s m">30/FEU to rely on</text>
+  <rect class="okbox" x="390" y="25" width="140" height="50" rx="25"/><text x="460" y="55" text-anchor="middle" class="b">confirmed</text>
+  <rect class="warnbox" x="390" y="170" width="140" height="50" rx="25"/><text x="460" y="192" text-anchor="middle" class="b">rejected</text><text x="460" y="209" text-anchor="middle" class="s">sailing capped</text>
+  <rect class="box" x="590" y="25" width="150" height="50" rx="25"/><text x="665" y="47" text-anchor="middle" class="b">held</text><text x="665" y="64" text-anchor="middle" class="s m">kept for later</text>
+  <rect class="soft" x="590" y="170" width="150" height="50" rx="25"/><text x="665" y="200" text-anchor="middle" class="b">released</text>
+  <line x1="110" y1="120" x2="168" y2="120" class="st" marker-end="url(#ar6)"/><text x="139" y="112" text-anchor="middle" class="s">request</text>
+  <path d="M235 95 V50 H388" class="st" marker-end="url(#ar6)"/><text x="312" y="43" text-anchor="middle" class="s">carrier: yes</text>
+  <path d="M260 145 V195 H388" class="st" marker-end="url(#ar6)"/><text x="324" y="188" text-anchor="middle" class="s">carrier: no</text>
+  <line x1="530" y1="40" x2="588" y2="40" class="st" marker-end="url(#ar6)"/><text x="559" y="33" text-anchor="middle" class="s">freed</text>
+  <line x1="590" y1="62" x2="532" y2="62" class="st" stroke-dasharray="4 3" marker-end="url(#ar6)"/><text x="561" y="85" text-anchor="middle" class="s">reused</text>
+  <line x1="665" y1="75" x2="665" y2="168" class="st" marker-end="url(#ar6)"/><text x="657" y="126" text-anchor="end" class="s">cutoff ≤ 2 days</text>
+  <path d="M200 145 V248 H690 V222" class="st" stroke-dasharray="4 3" marker-end="url(#ar6)"/><text x="445" y="242" text-anchor="middle" class="s m">a pending request no longer needed is withdrawn near cutoff</text>
+</svg>
+<figcaption>How each FEU beyond the allocation moves through its life. The solver prices the uncertain states (30 per FEU not yet confirmed, 10 more per FEU needing a new request), so it prefers held space, then space already asked for, then a new request. It still goes beyond the allocation whenever that delivers a container on time.</figcaption>
+</figure>
+
+<div class="scenario">
+  <div class="biz"><b>Business</b><p>A booking on unconfirmed space isn't really booked. If the carrier says no, those containers must move.</p></div>
+  <div class="solver"><b>Solver</b><p>Each sailing carries <code>confirmed_feu</code> and <code>committed_feu</code> (confirmed plus pending). After every plan, the planner works out requests, holds and releases. A rejection lowers the sailing's capacity, and the next repair moves what no longer fits.</p></div>
+  <div class="see"><b>You see</b><p>Lines like <code>carrier action: request 2 FEU on ATLS-PSX-W05</code> and <code>BORS-TP1-W03: carrier REJECTED 1 FEU; space now capped at 5 FEU</code>.</p></div>
+</div>
+<p>Two details follow from the business rule. The replan policy freezes a booking near cutoff only within confirmed space, because a booking on pending space isn't with the carrier yet; the run says so in a note. And in the replay, a simulator plays the carriers: the scenario's hidden <code>simulation</code> block says how much extra each carrier will really take. The planner never reads it and it is never sent to the solver; a test checks this. Plans are made on what carriers have said, not on what they will say.</p>
+<p>In the replay, after cycle 1 the plan holds 0.5 FEU of confirmed space it no longer needs on BORS-TP2-W02. It keeps it through cycle 2 in case a later change needs it, and releases it in cycle 3, once that sailing's cutoff is within two days.</p>
+
+<!-- 10 -->
+<h2 id="s-surge">10. Scenario: a peak-season surge</h2>
+<div class="scenario">
+  <div class="biz"><b>Business</b><p>On day 17 a vendor adds 10 FEU for Shanghai to Los Angeles. The lane's weekly allocation is 14 FEU and already nearly full. The demand can't fit in the contract.</p></div>
+  <div class="solver"><b>Solver</b><p>It fills the allocation and buys spot for the rest, choosing sailings that keep the most containers on time. The planner requests the extra space.</p></div>
+  <div class="see"><b>You see</b><p>Spot rises from 18.5 to 28.5 FEU with 99.6% of the allocation used; then carriers reject 6 of 12 FEU, and the next repair re-routes.</p></div>
+</div>
+<figure>
+<svg viewBox="0 0 760 310" role="img" aria-label="Sequence of the surge across cycles 4 and 5 between the vendor, the planner and solver, and the carriers.">
+  <defs><marker id="ar7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+  <text x="110" y="24" text-anchor="middle" class="b">Vendor</text>
+  <text x="380" y="24" text-anchor="middle" class="b">Planner + solver</text>
+  <text x="650" y="24" text-anchor="middle" class="b">Carriers</text>
+  <line x1="110" y1="34" x2="110" y2="302" class="st" stroke-dasharray="3 4" stroke-opacity=".5"/>
+  <line x1="380" y1="34" x2="380" y2="302" class="st" stroke-dasharray="3 4" stroke-opacity=".5"/>
+  <line x1="650" y1="34" x2="650" y2="302" class="st" stroke-dasharray="3 4" stroke-opacity=".5"/>
+  <text x="12" y="64" class="s m">day 17</text>
+  <line x1="110" y1="60" x2="376" y2="60" class="st" marker-end="url(#ar7)"/><text x="243" y="52" text-anchor="middle" class="s">10 more FEU, Shanghai → LA</text>
+  <rect class="accbox" x="240" y="74" width="280" height="44" rx="6"/><text x="380" y="92" text-anchor="middle" class="s b">repair: 3 moves</text><text x="380" y="109" text-anchor="middle" class="s">spot 18.5 → 28.5 FEU · 99.6% of allocation</text>
+  <line x1="380" y1="142" x2="646" y2="142" class="st" marker-end="url(#ar7)"/><text x="570" y="134" text-anchor="middle" class="s">request 12 FEU beyond allocation</text>
+  <text x="12" y="184" class="s m">day 19</text>
+  <line x1="650" y1="180" x2="384" y2="180" stroke="var(--ok)" stroke-width="1.5" marker-end="url(#ar7)"/><text x="570" y="172" text-anchor="middle" class="s">confirm 6 FEU</text>
+  <line x1="650" y1="212" x2="384" y2="212" stroke="var(--warn)" stroke-width="1.5" marker-end="url(#ar7)"/><text x="570" y="204" text-anchor="middle" class="s">reject 6 FEU → sailings capped</text>
+  <rect class="accbox" x="270" y="226" width="220" height="44" rx="6"/><text x="380" y="244" text-anchor="middle" class="s b">repair: 6 moves</text><text x="380" y="261" text-anchor="middle" class="s">boxes moved off rejected space</text>
+  <line x1="380" y1="294" x2="646" y2="294" class="st" marker-end="url(#ar7)"/><text x="570" y="286" text-anchor="middle" class="s">request 6 FEU more</text>
+</svg>
+<figcaption>Over-demand that needs spot, and what happens when carriers say no. The rejected FEU become hard capacity limits; the containers on them break the plan, and the next repair moves them to space that exists.</figcaption>
+</figure>
+
+<!-- 11 -->
+<h2 id="results">11. How good are the plans?</h2>
+<p>An <strong>exact MIP</strong> gets the exact same request as the Helixor solver and proves the optimum. A from-scratch hosted solve shows what re-planning everything would move.</p>
+<div class="scroll-x"><table>
+  <thead><tr><th>Cycle</th><th class="n">Helixor repair</th><th class="n">Optimum, same pins</th><th class="n">From scratch</th></tr></thead>
+  <tbody>
+    <tr><td>1 · day 3</td><td class="n">45,160 · 16 moved</td><td class="n">45,160 · 13</td><td class="n">45,220 · 72</td></tr>
+    <tr><td>2 · day 8</td><td class="n">50,040 · 14</td><td class="n">50,005 · 13</td><td class="n">48,790 · 72</td></tr>
+    <tr><td>3 · day 15</td><td class="n">46,825 · 5</td><td class="n">46,825 · 2</td><td class="n">43,705 · 60</td></tr>
+    <tr><td>4 · day 17 (surge)</td><td class="n">54,825 · 3</td><td class="n">54,825 · 3</td><td class="n">46,890 · 54</td></tr>
+    <tr><td>5 · day 19</td><td class="n">53,740 · 6</td><td class="n">53,740 · 6</td><td class="n">45,815 · 77</td></tr>
+  </tbody>
+</table></div>
+<p>Penalty excludes the change cost; "moved" counts containers whose sailing changed from the previous plan.</p>
+<ul>
+  <li><strong>Every repair is feasible</strong>, confirmed by the independent scorer.</li>
+  <li><strong>The Helixor repair reaches the proven same-pins optimum in cycles 1, 3, 4 and 5</strong>, and is 0.07% above it in cycle 2 (35 points), in 2.1–4.1 seconds.</li>
+  <li><strong>Repair moves far less than re-planning:</strong> 3–16 containers against 54–77. Where it moves a few more than the optimum, the extra moves are free containers (ones an event touched), which carry no change cost, so they leave the score unchanged.</li>
+  <li><strong>From scratch scores lower from cycle 2 on</strong> because nothing holds it to the bookings already with carriers. It reaches that by moving 54–77 containers, frozen bookings included, which is why it isn't a plan anyone would send.</li>
+</ul>
+<div class="note info"><strong>Measured on the next solver release.</strong> These figures come from the next Helixor solver release, run on a local server with the same requests; the hosted service gets it on its next deploy. That release closed a gap the hosted repair had in these cycles (4.5–10% above the same-pins optimum) with two generic search changes: each scoring level now judges a worse move in its own units, and every solve ends with a pass that proves no single move or swap improves the plan. Neither change knows about containers or sailings.</div>
+
+<h3>Why a declared model can be proven optimal</h3>
+<p>The exact MIP in this example (<code>ocean_routing/optimum.py</code>) is not a second model of the business. It restates the manifest's own rules as equations, rule for rule, and it proves the optimum of every cycle in 0.02–0.3 seconds. That is possible because each rule in the manifest has a declared shape, and every one of those shapes can be written as linear equations:</p>
+<div class="scroll-x"><table>
+  <thead><tr><th>Rule</th><th>Declared shape</th><th>As equations</th></tr></thead>
+  <tbody>
+    <tr><td>lane match, cargo ready by cutoff</td><td>which sailings a container may use</td><td>the container's choice is restricted to those sailings</td></tr>
+    <tr><td>sailing capacity</td><td>a sum over a sailing, at most a limit</td><td>one inequality per sailing</td></tr>
+    <tr><td>on-time delivery, days late</td><td>a cost for each container–sailing pair</td><td>a coefficient on that choice</td></tr>
+    <tr><td>allocation, spot, unconfirmed and new space</td><td>a cost of a sailing's load above or below a line</td><td>one extra variable and one inequality per line</td></tr>
+  </tbody>
+</table></div>
+<figure>
+<svg viewBox="0 0 760 230" role="img" aria-label="A declared manifest is checked rule by rule. When every rule has a shape that converts to linear equations, an exact solver returns a plan with a proof that nothing is better. Otherwise local search returns its best plan with a bound that says how far from the best possible it can be. Both run the same declared rules.">
+  <defs><marker id="ar9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+  <rect class="box" x="10" y="70" width="170" height="80" rx="8"/><text x="95" y="98" text-anchor="middle" class="b">Declared rules</text><text x="95" y="116" text-anchor="middle" class="s m">manifest: shapes,</text><text x="95" y="132" text-anchor="middle" class="s m">weights, parameters</text>
+  <rect class="accbox" x="250" y="70" width="200" height="80" rx="8"/><text x="350" y="98" text-anchor="middle" class="b">Read each rule's shape</text><text x="350" y="116" text-anchor="middle" class="s">does every rule convert</text><text x="350" y="132" text-anchor="middle" class="s">to linear equations?</text>
+  <rect class="okbox" x="530" y="20" width="220" height="70" rx="8"/><text x="640" y="46" text-anchor="middle" class="b">Exact solver</text><text x="640" y="64" text-anchor="middle" class="s">plan + proof that nothing</text><text x="640" y="80" text-anchor="middle" class="s">is better (bound = answer)</text>
+  <rect class="box" x="530" y="130" width="220" height="70" rx="8"/><text x="640" y="156" text-anchor="middle" class="b">Local search</text><text x="640" y="174" text-anchor="middle" class="s">best plan found + a bound:</text><text x="640" y="190" text-anchor="middle" class="s">how far from the best it can be</text>
+  <line x1="180" y1="110" x2="248" y2="110" class="st" marker-end="url(#ar9)"/>
+  <line x1="450" y1="95" x2="528" y2="60" class="st" marker-end="url(#ar9)"/><text x="482" y="68" text-anchor="middle" class="s">yes</text>
+  <line x1="450" y1="125" x2="528" y2="160" class="st" marker-end="url(#ar9)"/><text x="482" y="160" text-anchor="middle" class="s">no</text>
+  <text x="350" y="215" text-anchor="middle" class="s m">one model: the same declared rules, weights and configuration drive both</text>
+</svg>
+<figcaption>What a declared model makes possible. Because the solver can read what each rule is, not only what it scores, it can choose a method that proves its answer when the rules allow it, and say how close to the best its answer is when they don't.</figcaption>
+</figure>
+<p>What follows from the model being declared rather than programmed:</p>
+<ul>
+  <li><strong>A proven answer where the rules allow one.</strong> When every rule converts, the answer can come with a proof that no better plan exists, not just a good plan.</li>
+  <li><strong>A measured gap where they don't.</strong> Converting the rules that do convert gives a bound, so a plan found by search can say how far from the best possible it can be.</li>
+  <li><strong>One model to maintain.</strong> The equations come from the manifest, so a change to a rule, a weight or a customer's configuration reaches the exact method and the search at once. Nobody keeps a second copy in step.</li>
+  <li><strong>Every answer stays checkable.</strong> Whichever method produced the plan, the certificate scores it against the same declared rules, and the independent scorer re-checks it.</li>
+</ul>
+<div class="note info"><strong>Status.</strong> In this example the MIP is written by hand from the manifest, as a yardstick. Generating it from the manifest, and choosing between exact solving and search per request, is planned and not yet part of the hosted solver. Rules about sequences and timing along a route, and very large instances, will stay with search.</div>
+
+<!-- 12 -->
+<h2 id="run">12. Run it yourself</h2>
+<p>Hosted solves need a Helixor account at <a href="https://helixor.dev">helixor.dev</a> whose organization holds a <strong>Helixor Solver license</strong>, plus the Solver API origin and a token for your account. The repository itself contains no solver. Everything marked <span class="pill off">offline</span> runs without a license.</p>
+<pre><code>git clone https://github.com/HelixorAI/helixor-solver-ocean-container-routing.git
+cd helixor-solver-ocean-container-routing
+python -m venv .venv &amp;&amp; source .venv/bin/activate
+pip install -r requirements.txt
+pytest -q                                   # offline tests; live tests run only with SOLVER_LIVE=1</code></pre>
+<div class="scroll-x"><table>
+  <thead><tr><th>Step</th><th>Command</th><th>Needs</th><th class="n">About</th></tr></thead>
+  <tbody>
+    <tr><td>Proven optimum</td><td><code>python -m ocean_routing optimum</code></td><td><span class="pill off">offline</span></td><td class="n">1 s</td></tr>
+    <tr><td>Score any plan</td><td><code>python -m ocean_routing score out/plan-optimum.json</code></td><td><span class="pill off">offline</span></td><td class="n">1 s</td></tr>
+    <tr><td>Replay, MIP repairs</td><td><code>python -m ocean_routing continuous --start out/plan-optimum.json --offline</code><br><span class="pill">writes out/continuous-offline/</span></td><td><span class="pill off">offline</span></td><td class="n">5 s</td></tr>
+    <tr><td>Report</td><td><code>python -m ocean_routing report out/plan-optimum.json -o out/report.html</code></td><td><span class="pill off">offline</span></td><td class="n">1 s</td></tr>
+    <tr><td>Publish the pack</td><td><code>python -m ocean_routing publish-pack</code></td><td><span class="pill lic">license</span></td><td class="n">5 s</td></tr>
+    <tr><td>First plan</td><td><code>python -m ocean_routing plan</code></td><td><span class="pill lic">license</span></td><td class="n">1 min</td></tr>
+    <tr><td>Adopt a plan</td><td><code>python -m ocean_routing adopt out/plan-optimum.json</code></td><td><span class="pill lic">license</span></td><td class="n">5 s</td></tr>
+    <tr><td>Hosted replay + comparisons</td><td><code>python -m ocean_routing continuous --start out/plan-adopted.json --compare</code></td><td><span class="pill lic">license</span></td><td class="n">10 min</td></tr>
+    <tr><td>Pinning scenarios</td><td><code>python -m ocean_routing pinning</code></td><td><span class="pill lic">license</span></td><td class="n">7 min</td></tr>
+  </tbody>
+</table></div>
+<p>For hosted steps, copy <code>.env.example</code> to <code>.env</code>, fill in <code>SOLVER_URL</code> and <code>SOLVER_TOKEN</code>, and load it with <code>set -a &amp;&amp; . ./.env &amp;&amp; set +a</code>. Outputs land in <code>out/</code>. The <a href="https://github.com/HelixorAI/helixor-solver-ocean-container-routing#readme">README</a> has the full command reference and every measured table; the <a href="https://github.com/HelixorAI/helixor-solver-ocean-container-routing/blob/main/docs/TUTORIAL.md">tutorial</a> explains each rule and file in depth. Source: <a href="https://github.com/HelixorAI/helixor-solver-ocean-container-routing">https://github.com/HelixorAI/helixor-solver-ocean-container-routing</a>.</p>
+
+<!-- 13 -->
+<h2 id="glossary">13. Glossary</h2>
+<div class="scroll-x"><table>
+  <tbody>
+    <tr><th>FEU</th><td>Forty-foot equivalent unit. A 40' container is 1 FEU, a 20' container 0.5.</td></tr>
+    <tr><th>Lane</th><td>An origin–destination port pair, such as CNSHA-USLAX.</td></tr>
+    <tr><th>Sailing</th><td>One weekly voyage of one carrier service, for example ATLS-PSX-W03: Atlas Line, service PSX, week 3.</td></tr>
+    <tr><th>Cutoff</th><td>The last day the container yard accepts cargo for a sailing.</td></tr>
+    <tr><th>Allocation</th><td>Weekly space a carrier has contracted to the importer on a sailing. Already acknowledged.</td></tr>
+    <tr><th>Spot</th><td>Space beyond the allocation, bought at market rates, up to what the carrier has on sale.</td></tr>
+    <tr><th>Promise date</th><td>The day the container's customer was promised delivery.</td></tr>
+    <tr><th>Solver pack</th><td>A versioned zip of configuration (manifest, rules, weights, a demo dataset) published to the hosted solver. Versions are immutable.</td></tr>
+    <tr><th>Lowering</th><td>Turning your records into the request: deriving on-time sailings, capacity, confirmed and committed space.</td></tr>
+    <tr><th>Certificate</th><td>The solver's account of a plan: feasible or not, and each rule's penalty.</td></tr>
+    <tr><th>Pin</th><td>Per-container instruction in a repair: <code>frozen</code>, <code>forbid</code>, <code>prefer</code>, or none.</td></tr>
+    <tr><th>Change cost</th><td>The price of moving a <code>prefer</code> container, in the same units as the weights.</td></tr>
+    <tr><th>Confirmed / committed</th><td>Confirmed: space the carrier acknowledged. Committed: confirmed plus pending requests.</td></tr>
+  </tbody>
+</table></div>
+</main>
+<script>
+(function(){var b=document.getElementById('theme'),r=document.documentElement;
+function cur(){var t=r.getAttribute('data-theme');if(t)return t;return matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}
+try{var s=localStorage.getItem('guide-theme');if(s)r.setAttribute('data-theme',s)}catch(e){}
+b.addEventListener('click',function(){var n=cur()==='dark'?'light':'dark';r.setAttribute('data-theme',n);try{localStorage.setItem('guide-theme',n)}catch(e){}})})();
+</script>
+</body>
+</html>

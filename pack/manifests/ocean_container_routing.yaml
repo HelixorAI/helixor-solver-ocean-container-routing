@@ -1,0 +1,310 @@
+version: "2.3"
+domain: OceanContainerRouting
+problem_type: ocean_container_routing
+policy_id: booking_consolidation
+description: >
+  Book a customer's ocean containers onto carrier sailings inside a planning
+  window. Each carrier grants the customer a weekly space allocation (FEU) on
+  its sailings and sells extra space at spot rates; FEU loaded beyond the
+  allocation on a sailing is spot space. The plan maximises containers delivered
+  by their promise date, fills the allocated space, and keeps spot purchases to
+  a minimum.
+
+# Containers are entities, sailings are groups. The policy names the shared
+# manifest assignment engine this pack runs on; the rules below are the model.
+decision:
+  shape: assignment
+  entities:
+    name: containers
+    source: containers
+    identity: id
+  groups:
+    name: sailings
+    source: sailings
+    identity: id
+  domain:
+    multiplicity: one_to_many        # one sailing carries many containers
+    total_over_entities: true        # every container must be booked
+    total_over_groups: false         # a sailing may carry none (scored below)
+  # Continuous planning: a request may carry the previous plan (prior_plan),
+  # freeze what is already booked with the carrier (frozen), forbid a sailing a
+  # container was rolled from (forbid) and keep the rest where it was unless a
+  # move pays for the disruption (prefer, priced by change_cost).
+  pinning:
+    modes: [frozen, forbid, prefer]
+    granularity: entity
+    prior_plan: true
+    change_cost: {default: 25.0, min: 0.0}
+    ui: {label: "Lock to sailing"}
+
+# The business terms are SOFT rules in one band, so their weights rank them:
+#   one late container (1000)  >  one unused allocated FEU (100)
+#   >  one spot FEU (40)  >  one FEU on unacknowledged space (30)
+#   >  one FEU needing a new space request (10)  >  one day late (5)
+# Filling unused allocation instead of buying spot therefore always pays
+# (-100 - 40), while no amount of utilisation is worth making a container late.
+# An FEU beyond the allocation costs 40 on held space, 70 on space already
+# requested and 80 on space still to request: still far below a late container.
+search:
+  acceptor: simulated_annealing
+  max_evaluations: 300000
+
+constraints:
+  lane_match:
+    name: "Same Lane"
+    description: >
+      A container can only sail on a sailing serving its own origin and
+      destination port pair (POL-POD lane).
+    category: routing
+    type: eligibility
+    default_enabled: true
+    contract: assigned_equals
+    parameters:
+      entity_attribute: lane
+      group_attribute: lane
+
+  cargo_ready_by_cutoff:
+    name: "Cargo Ready By Cutoff"
+    description: >
+      The container must be ready (cargo ready date) on or before the sailing's
+      container-yard cutoff.
+    category: schedule
+    type: eligibility
+    default_enabled: true
+    contract: fits
+    parameters:
+      entity_attribute: ready_day
+      group_attribute: cutoff_day
+
+  sailing_capacity:
+    name: "Space On Sale"
+    description: >
+      FEU booked on a sailing stays within the space the carrier will give this
+      customer: its allocation plus the spot space on sale.
+    category: capacity
+    type: hard
+    default_enabled: true
+    contract: group_sum_max
+    parameters:
+      entity_attribute: feu
+      group_attribute: capacity_feu
+
+  on_time_delivery:
+    name: "Arrive By Promise Date"
+    description: >
+      The container's sailing arrives on or before its promise date. Penalty is
+      one per late container. `on_time_sailings` lists, per container, the
+      sailings whose arrival day is on or before its promise day; it is derived
+      from the schedule and the promise date, not chosen by the caller.
+    category: service
+    type: soft
+    default_enabled: true
+    weight: 1000.0
+    contract: assigned_in_entity_set
+    parameters:
+      group_attribute: id
+      entity_attribute: on_time_sailings
+
+  allocation_utilization:
+    name: "Use Allocated Space"
+    description: >
+      Every sailing should carry at least the customer's allocated FEU. Penalty
+      is the unused allocation in FEU, judged on empty sailings too: an
+      allocation nobody loaded is the largest shortfall.
+    category: utilization
+    type: soft
+    default_enabled: true
+    weight: 100.0
+    contract: aggregate
+    parameters:
+      collect: sum
+      entity_attribute: feu
+      compare: ">="
+      group_attribute: allocation_feu
+      empty_groups: judge
+
+  minimize_spot:
+    name: "Minimise Spot Space"
+    description: >
+      FEU booked beyond the allocation on a sailing is bought at spot rates.
+      Penalty is that overflow in FEU.
+    category: cost
+    type: soft
+    default_enabled: true
+    weight: 40.0
+    contract: aggregate
+    parameters:
+      collect: sum
+      entity_attribute: feu
+      compare: "<="
+      group_attribute: allocation_feu
+
+  days_late:
+    name: "Days Late"
+    description: >
+      Days between the promise date and the sailing's arrival, for late
+      containers. Breaks ties between late options: if a container cannot make
+      its date, land it as early as possible.
+    category: service
+    type: soft
+    default_enabled: true
+    weight: 5.0
+    contract: group_fits
+    parameters:
+      group_attribute: eta_day
+      entity_attribute: promise_day
+
+  # Space beyond the allocation must be acknowledged by the carrier, and a
+  # request can be rejected. These two rules price relying on space the
+  # carrier has not acknowledged, so the plan fills held (confirmed) space
+  # first, then space already requested, and asks for new space last. They
+  # stay far below one late container: over-allocating to deliver on time pays.
+  unconfirmed_space:
+    name: "Relies On Unconfirmed Space"
+    description: >
+      FEU booked on a sailing beyond the space the carrier has acknowledged
+      (allocation plus accepted extra). The carrier may still reject it.
+    category: carrier
+    type: soft
+    default_enabled: true
+    weight: 30.0
+    contract: aggregate
+    parameters:
+      collect: sum
+      entity_attribute: feu
+      compare: "<="
+      group_attribute: confirmed_feu
+
+  new_space_request:
+    name: "Needs A New Space Request"
+    description: >
+      FEU booked beyond the space already confirmed or requested on a sailing:
+      a new over-allocation request or spot booking has to go to the carrier.
+    category: carrier
+    type: soft
+    default_enabled: true
+    weight: 10.0
+    contract: aggregate
+    parameters:
+      collect: sum
+      entity_attribute: feu
+      compare: "<="
+      group_attribute: committed_feu
+
+categories:
+  - id: routing
+    name: "Routing"
+    description: "Which sailings may carry a container"
+    icon: "map"
+  - id: carrier
+    name: "Carrier Acknowledgement"
+    description: "Relying on space the carrier has not yet acknowledged"
+    icon: "handshake"
+  - id: schedule
+    name: "Sailing Schedule"
+    description: "Cargo readiness against sailing cutoffs"
+    icon: "calendar"
+  - id: capacity
+    name: "Space"
+    description: "Allocated and spot space per sailing"
+    icon: "box"
+  - id: service
+    name: "Promise Dates"
+    description: "Arrive by the date promised to the customer"
+    icon: "clock"
+  - id: utilization
+    name: "Allocation Use"
+    description: "Fill the space carriers allocated to the customer"
+    icon: "chart-bar"
+  - id: cost
+    name: "Spot Market"
+    description: "Space bought beyond the allocation"
+    icon: "dollar"
+
+data_schema:
+  entities:
+    containers:
+      description: "Containers to book in the planning window"
+      required: true
+      columns:
+        - {name: id, type: string, required: true}
+        - {name: lane, type: string, required: true, description: "POL-POD, e.g. CNSHA-USLAX"}
+        - {name: feu, type: number, required: true, description: "Forty-foot equivalents: 1 for 40', 0.5 for 20'"}
+        - {name: ready_day, type: number, required: true, description: "Cargo ready day, days from window start"}
+        - {name: promise_day, type: number, required: true, description: "Promised arrival day at POD"}
+        - {name: on_time_sailings, type: array, required: true, description: "Sailing ids arriving by promise_day"}
+    sailings:
+      description: "Carrier sailings with the customer's allocated and spot space"
+      required: true
+      columns:
+        - {name: id, type: string, required: true}
+        - {name: lane, type: string, required: true}
+        - {name: cutoff_day, type: number, required: true}
+        - {name: eta_day, type: number, required: true}
+        - {name: allocation_feu, type: number, required: true, description: "Customer allocation on this sailing"}
+        - {name: capacity_feu, type: number, required: true, description: "Allocation plus spot space on sale"}
+        - {name: confirmed_feu, type: number, required: true, description: "Space the carrier has acknowledged"}
+        - {name: committed_feu, type: number, required: true, description: "Acknowledged plus requested space"}
+
+ui:
+  hidden: false
+  surfaces:
+    solve:
+      enabled: true
+      primary: true
+      label: "Plan container sailings"
+      description: "Book containers onto allocated carrier space, then repair the plan as events arrive."
+  # Declared visualizations. Each binds to the request's records (entities =
+  # containers, groups = sailings) and the solution's placements; a KPI names a
+  # rule and is evaluated from that rule's own contract and parameters, so a
+  # renderer needs no ocean-routing knowledge. `python -m ocean_routing report`
+  # renders these today; the Solver UX does not yet read `ui.visualizations`.
+  visualizations:
+    - id: plan_kpis
+      type: kpi
+      name: "Plan at a glance"
+      metrics:
+        - {rule: on_time_delivery, measure: satisfied_share, label: "On time", format: percent}
+        - {rule: on_time_delivery, measure: violated_count, label: "Late containers", status: critical}
+        - {rule: allocation_utilization, measure: fill_share, label: "Allocation used", format: percent}
+        - {rule: minimize_spot, measure: excess, label: "Spot space", unit: FEU}
+        - {rule: days_late, measure: excess, label: "Days late, total", unit: days}
+        - {rule: unconfirmed_space, measure: excess, label: "On unacknowledged space", unit: FEU}
+        - {rule: new_space_request, measure: excess, label: "Space still to request", unit: FEU}
+    - id: sailing_load
+      type: stacked_bar
+      name: "Load by sailing"
+      description: "FEU booked on each sailing: allocation used, extra space the carrier has acknowledged, extra space not yet acknowledged, allocation left unused and acknowledged space held for later."
+      rows: groups
+      row_label: id
+      group_by: lane
+      sort_by: etd_day
+      value: {collect: sum, entity_attribute: feu}
+      allocation: allocation_feu
+      confirmed: confirmed_feu
+      limit: capacity_feu
+    - id: weekly_utilization
+      type: bar
+      name: "Allocation used by week and carrier"
+      rows: groups
+      x_axis: week
+      group_by: carrier
+      value: {collect: sum, entity_attribute: feu, cap: allocation_feu}
+      reference: allocation_feu
+      format: percent
+    - id: schedule
+      type: gantt
+      name: "Sailing schedule"
+      rows: groups
+      lanes: lane
+      start: etd_day
+      end: eta_day
+      label: id
+      value: {collect: sum, entity_attribute: feu}
+    - id: late_containers
+      type: table
+      name: "Late containers"
+      rows: entities
+      filter: {rule: on_time_delivery, violated: true}
+      columns: [id, lane, size, promise_day, group.id, group.eta_day]
+

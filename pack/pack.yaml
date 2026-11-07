@@ -1,0 +1,13 @@
+id: ocean_container_routing
+version: "2.3"
+display_name: "Ocean Container Routing"
+description: "Book containers onto carrier space allocations and repair the plan as events arrive"
+modules: [solvers, ui]
+manifests:
+  - manifests/ocean_container_routing.yaml
+solver_policies: [booking_consolidation]
+datasets:
+  - problem_type: ocean_container_routing
+    uri: datasets/two_lane_week.demo.json
+    scenario: two_lane_week
+    label: Two lanes, one week

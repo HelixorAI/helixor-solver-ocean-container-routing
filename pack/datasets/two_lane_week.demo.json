@@ -1,0 +1,582 @@
+{
+ "containers": [
+  {
+   "id": "CNSHA-0001",
+   "lane": "CNSHA-USLAX",
+   "size": "20GP",
+   "feu": 0.5,
+   "ready_day": 1,
+   "promise_day": 21,
+   "on_time_sailings": [
+    "ATLS-PSX-W00",
+    "BORS-TP1-W00"
+   ]
+  },
+  {
+   "id": "CNSHA-0002",
+   "lane": "CNSHA-USLAX",
+   "size": "40GP",
+   "feu": 1.0,
+   "ready_day": 6,
+   "promise_day": 27,
+   "on_time_sailings": [
+    "ATLS-PSX-W00",
+    "ATLS-PSX-W01",
+    "BORS-TP1-W00",
+    "COBT-CPX-W00"
+   ]
+  },
+  {
+   "id": "CNSHA-0003",
+   "lane": "CNSHA-USLAX",
+   "size": "40GP",
+   "feu": 1.0,
+   "ready_day": 4,
+   "promise_day": 29,
+   "on_time_sailings": [
+    "ATLS-PSX-W00",
+    "ATLS-PSX-W01",
+    "BORS-TP1-W00",
+    "BORS-TP1-W01",
+    "COBT-CPX-W00"
+   ]
+  },
+  {
+   "id": "CNSHA-0004",
+   "lane": "CNSHA-USLAX",
+   "size": "40HC",
+   "feu": 1.0,
+   "ready_day": 2,
+   "promise_day": 19,
+   "on_time_sailings": [
+    "ATLS-PSX-W00"
+   ]
+  },
+  {
+   "id": "CNSHA-0005",
+   "lane": "CNSHA-USLAX",
+   "size": "40HC",
+   "feu": 1.0,
+   "ready_day": 5,
+   "promise_day": 30,
+   "on_time_sailings": [
+    "ATLS-PSX-W00",
+    "ATLS-PSX-W01",
+    "BORS-TP1-W00",
+    "BORS-TP1-W01",
+    "COBT-CPX-W00"
+   ]
+  },
+  {
+   "id": "CNSHA-0006",
+   "lane": "CNSHA-USLAX",
+   "size": "40HC",
+   "feu": 1.0,
+   "ready_day": 5,
+   "promise_day": 25,
+   "on_time_sailings": [
+    "ATLS-PSX-W00",
+    "ATLS-PSX-W01",
+    "BORS-TP1-W00"
+   ]
+  },
+  {
+   "id": "CNSHA-0007",
+   "lane": "CNSHA-USLAX",
+   "size": "40HC",
+   "feu": 1.0,
+   "ready_day": 2,
+   "promise_day": 20,
+   "on_time_sailings": [
+    "ATLS-PSX-W00"
+   ]
+  },
+  {
+   "id": "CNSHA-0008",
+   "lane": "CNSHA-USLAX",
+   "size": "40GP",
+   "feu": 1.0,
+   "ready_day": 0,
+   "promise_day": 18,
+   "on_time_sailings": [
+    "ATLS-PSX-W00"
+   ]
+  },
+  {
+   "id": "CNSHA-0009",
+   "lane": "CNSHA-USLAX",
+   "size": "40HC",
+   "feu": 1.0,
+   "ready_day": 0,
+   "promise_day": 23,
+   "on_time_sailings": [
+    "ATLS-PSX-W00",
+    "ATLS-PSX-W01",
+    "BORS-TP1-W00"
+   ]
+  },
+  {
+   "id": "CNSHA-0010",
+   "lane": "CNSHA-USLAX",
+   "size": "40HC",
+   "feu": 1.0,
+   "ready_day": 0,
+   "promise_day": 26,
+   "on_time_sailings": [
+    "ATLS-PSX-W00",
+    "ATLS-PSX-W01",
+    "BORS-TP1-W00",
+    "COBT-CPX-W00"
+   ]
+  },
+  {
+   "id": "CNSHA-0011",
+   "lane": "CNSHA-USLAX",
+   "size": "40GP",
+   "feu": 1.0,
+   "ready_day": 5,
+   "promise_day": 27,
+   "on_time_sailings": [
+    "ATLS-PSX-W00",
+    "ATLS-PSX-W01",
+    "BORS-TP1-W00",
+    "COBT-CPX-W00"
+   ]
+  },
+  {
+   "id": "CNSHA-0012",
+   "lane": "CNSHA-USLAX",
+   "size": "40HC",
+   "feu": 1.0,
+   "ready_day": 4,
+   "promise_day": 21,
+   "on_time_sailings": [
+    "ATLS-PSX-W00",
+    "BORS-TP1-W00"
+   ]
+  },
+  {
+   "id": "CNSHA-0013",
+   "lane": "CNSHA-USLAX",
+   "size": "40HC",
+   "feu": 1.0,
+   "ready_day": 0,
+   "promise_day": 25,
+   "on_time_sailings": [
+    "ATLS-PSX-W00",
+    "ATLS-PSX-W01",
+    "BORS-TP1-W00"
+   ]
+  },
+  {
+   "id": "CNSHA-0014",
+   "lane": "CNSHA-USLAX",
+   "size": "20GP",
+   "feu": 0.5,
+   "ready_day": 1,
+   "promise_day": 22,
+   "on_time_sailings": [
+    "ATLS-PSX-W00",
+    "ATLS-PSX-W01",
+    "BORS-TP1-W00"
+   ]
+  },
+  {
+   "id": "CNSHA-0015",
+   "lane": "CNSHA-USLAX",
+   "size": "40HC",
+   "feu": 1.0,
+   "ready_day": 5,
+   "promise_day": 27,
+   "on_time_sailings": [
+    "ATLS-PSX-W00",
+    "ATLS-PSX-W01",
+    "BORS-TP1-W00",
+    "COBT-CPX-W00"
+   ]
+  },
+  {
+   "id": "CNSHA-0016",
+   "lane": "CNSHA-USLAX",
+   "size": "40HC",
+   "feu": 1.0,
+   "ready_day": 6,
+   "promise_day": 29,
+   "on_time_sailings": [
+    "ATLS-PSX-W00",
+    "ATLS-PSX-W01",
+    "BORS-TP1-W00",
+    "BORS-TP1-W01",
+    "COBT-CPX-W00"
+   ]
+  },
+  {
+   "id": "CNSHA-0017",
+   "lane": "CNSHA-USLAX",
+   "size": "40GP",
+   "feu": 1.0,
+   "ready_day": 5,
+   "promise_day": 32,
+   "on_time_sailings": [
+    "ATLS-PSX-W00",
+    "ATLS-PSX-W01",
+    "ATLS-PSX-W02",
+    "BORS-TP1-W00",
+    "BORS-TP1-W01",
+    "COBT-CPX-W00",
+    "COBT-CPX-W01"
+   ]
+  },
+  {
+   "id": "CNSHA-0018",
+   "lane": "CNSHA-USLAX",
+   "size": "40HC",
+   "feu": 1.0,
+   "ready_day": 3,
+   "promise_day": 23,
+   "on_time_sailings": [
+    "ATLS-PSX-W00",
+    "ATLS-PSX-W01",
+    "BORS-TP1-W00"
+   ]
+  },
+  {
+   "id": "CNYTN-0019",
+   "lane": "CNYTN-USLAX",
+   "size": "40HC",
+   "feu": 1.0,
+   "ready_day": 4,
+   "promise_day": 30,
+   "on_time_sailings": [
+    "BORS-TP2-W00",
+    "BORS-TP2-W01",
+    "DORM-DPS-W00",
+    "DORM-DPS-W01"
+   ]
+  },
+  {
+   "id": "CNYTN-0020",
+   "lane": "CNYTN-USLAX",
+   "size": "40GP",
+   "feu": 1.0,
+   "ready_day": 4,
+   "promise_day": 22,
+   "on_time_sailings": [
+    "BORS-TP2-W00",
+    "DORM-DPS-W00"
+   ]
+  },
+  {
+   "id": "CNYTN-0021",
+   "lane": "CNYTN-USLAX",
+   "size": "40HC",
+   "feu": 1.0,
+   "ready_day": 0,
+   "promise_day": 28,
+   "on_time_sailings": [
+    "BORS-TP2-W00",
+    "BORS-TP2-W01",
+    "DORM-DPS-W00"
+   ]
+  },
+  {
+   "id": "CNYTN-0022",
+   "lane": "CNYTN-USLAX",
+   "size": "40HC",
+   "feu": 1.0,
+   "ready_day": 5,
+   "promise_day": 32,
+   "on_time_sailings": [
+    "BORS-TP2-W00",
+    "BORS-TP2-W01",
+    "BORS-TP2-W02",
+    "DORM-DPS-W00",
+    "DORM-DPS-W01"
+   ]
+  },
+  {
+   "id": "CNYTN-0023",
+   "lane": "CNYTN-USLAX",
+   "size": "40GP",
+   "feu": 1.0,
+   "ready_day": 0,
+   "promise_day": 18,
+   "on_time_sailings": []
+  },
+  {
+   "id": "CNYTN-0024",
+   "lane": "CNYTN-USLAX",
+   "size": "40HC",
+   "feu": 1.0,
+   "ready_day": 2,
+   "promise_day": 30,
+   "on_time_sailings": [
+    "BORS-TP2-W00",
+    "BORS-TP2-W01",
+    "DORM-DPS-W00",
+    "DORM-DPS-W01"
+   ]
+  },
+  {
+   "id": "CNYTN-0025",
+   "lane": "CNYTN-USLAX",
+   "size": "40HC",
+   "feu": 1.0,
+   "ready_day": 1,
+   "promise_day": 21,
+   "on_time_sailings": [
+    "BORS-TP2-W00"
+   ]
+  },
+  {
+   "id": "CNYTN-0026",
+   "lane": "CNYTN-USLAX",
+   "size": "40HC",
+   "feu": 1.0,
+   "ready_day": 6,
+   "promise_day": 28,
+   "on_time_sailings": [
+    "BORS-TP2-W00",
+    "BORS-TP2-W01",
+    "DORM-DPS-W00"
+   ]
+  },
+  {
+   "id": "CNYTN-0027",
+   "lane": "CNYTN-USLAX",
+   "size": "40GP",
+   "feu": 1.0,
+   "ready_day": 0,
+   "promise_day": 27,
+   "on_time_sailings": [
+    "BORS-TP2-W00",
+    "BORS-TP2-W01",
+    "DORM-DPS-W00"
+   ]
+  },
+  {
+   "id": "CNYTN-0028",
+   "lane": "CNYTN-USLAX",
+   "size": "40HC",
+   "feu": 1.0,
+   "ready_day": 2,
+   "promise_day": 23,
+   "on_time_sailings": [
+    "BORS-TP2-W00",
+    "DORM-DPS-W00"
+   ]
+  }
+ ],
+ "sailings": [
+  {
+   "id": "ATLS-PSX-W00",
+   "carrier": "ATLS",
+   "service": "PSX",
+   "lane": "CNSHA-USLAX",
+   "week": 0,
+   "cutoff_day": -1,
+   "etd_day": 1,
+   "eta_day": 17,
+   "allocation_feu": 6.0,
+   "capacity_feu": 9.0,
+   "confirmed_feu": 6.0,
+   "committed_feu": 6.0
+  },
+  {
+   "id": "ATLS-PSX-W01",
+   "carrier": "ATLS",
+   "service": "PSX",
+   "lane": "CNSHA-USLAX",
+   "week": 1,
+   "cutoff_day": 6,
+   "etd_day": 8,
+   "eta_day": 22,
+   "allocation_feu": 6.0,
+   "capacity_feu": 15.0,
+   "confirmed_feu": 6.0,
+   "committed_feu": 6.0
+  },
+  {
+   "id": "ATLS-PSX-W02",
+   "carrier": "ATLS",
+   "service": "PSX",
+   "lane": "CNSHA-USLAX",
+   "week": 2,
+   "cutoff_day": 13,
+   "etd_day": 15,
+   "eta_day": 31,
+   "allocation_feu": 0.0,
+   "capacity_feu": 8.0,
+   "confirmed_feu": 0.0,
+   "committed_feu": 0.0
+  },
+  {
+   "id": "BORS-TP1-W00",
+   "carrier": "BORS",
+   "service": "TP1",
+   "lane": "CNSHA-USLAX",
+   "week": 0,
+   "cutoff_day": 1,
+   "etd_day": 3,
+   "eta_day": 21,
+   "allocation_feu": 5.0,
+   "capacity_feu": 9.0,
+   "confirmed_feu": 5.0,
+   "committed_feu": 5.0
+  },
+  {
+   "id": "BORS-TP1-W01",
+   "carrier": "BORS",
+   "service": "TP1",
+   "lane": "CNSHA-USLAX",
+   "week": 1,
+   "cutoff_day": 8,
+   "etd_day": 10,
+   "eta_day": 28,
+   "allocation_feu": 5.0,
+   "capacity_feu": 11.0,
+   "confirmed_feu": 5.0,
+   "committed_feu": 5.0
+  },
+  {
+   "id": "BORS-TP1-W02",
+   "carrier": "BORS",
+   "service": "TP1",
+   "lane": "CNSHA-USLAX",
+   "week": 2,
+   "cutoff_day": 15,
+   "etd_day": 17,
+   "eta_day": 34,
+   "allocation_feu": 0.0,
+   "capacity_feu": 6.0,
+   "confirmed_feu": 0.0,
+   "committed_feu": 0.0
+  },
+  {
+   "id": "COBT-CPX-W00",
+   "carrier": "COBT",
+   "service": "CPX",
+   "lane": "CNSHA-USLAX",
+   "week": 0,
+   "cutoff_day": 3,
+   "etd_day": 5,
+   "eta_day": 26,
+   "allocation_feu": 3.0,
+   "capacity_feu": 7.0,
+   "confirmed_feu": 3.0,
+   "committed_feu": 3.0
+  },
+  {
+   "id": "COBT-CPX-W01",
+   "carrier": "COBT",
+   "service": "CPX",
+   "lane": "CNSHA-USLAX",
+   "week": 1,
+   "cutoff_day": 10,
+   "etd_day": 12,
+   "eta_day": 31,
+   "allocation_feu": 3.0,
+   "capacity_feu": 10.0,
+   "confirmed_feu": 3.0,
+   "committed_feu": 3.0
+  },
+  {
+   "id": "COBT-CPX-W02",
+   "carrier": "COBT",
+   "service": "CPX",
+   "lane": "CNSHA-USLAX",
+   "week": 2,
+   "cutoff_day": 17,
+   "etd_day": 19,
+   "eta_day": 39,
+   "allocation_feu": 0.0,
+   "capacity_feu": 10.0,
+   "confirmed_feu": 0.0,
+   "committed_feu": 0.0
+  },
+  {
+   "id": "BORS-TP2-W00",
+   "carrier": "BORS",
+   "service": "TP2",
+   "lane": "CNYTN-USLAX",
+   "week": 0,
+   "cutoff_day": 0,
+   "etd_day": 2,
+   "eta_day": 19,
+   "allocation_feu": 5.0,
+   "capacity_feu": 10.0,
+   "confirmed_feu": 5.0,
+   "committed_feu": 5.0
+  },
+  {
+   "id": "BORS-TP2-W01",
+   "carrier": "BORS",
+   "service": "TP2",
+   "lane": "CNYTN-USLAX",
+   "week": 1,
+   "cutoff_day": 7,
+   "etd_day": 9,
+   "eta_day": 25,
+   "allocation_feu": 5.0,
+   "capacity_feu": 13.0,
+   "confirmed_feu": 5.0,
+   "committed_feu": 5.0
+  },
+  {
+   "id": "BORS-TP2-W02",
+   "carrier": "BORS",
+   "service": "TP2",
+   "lane": "CNYTN-USLAX",
+   "week": 2,
+   "cutoff_day": 14,
+   "etd_day": 16,
+   "eta_day": 31,
+   "allocation_feu": 0.0,
+   "capacity_feu": 10.0,
+   "confirmed_feu": 0.0,
+   "committed_feu": 0.0
+  },
+  {
+   "id": "DORM-DPS-W00",
+   "carrier": "DORM",
+   "service": "DPS",
+   "lane": "CNYTN-USLAX",
+   "week": 0,
+   "cutoff_day": 2,
+   "etd_day": 4,
+   "eta_day": 22,
+   "allocation_feu": 3.0,
+   "capacity_feu": 6.0,
+   "confirmed_feu": 3.0,
+   "committed_feu": 3.0
+  },
+  {
+   "id": "DORM-DPS-W01",
+   "carrier": "DORM",
+   "service": "DPS",
+   "lane": "CNYTN-USLAX",
+   "week": 1,
+   "cutoff_day": 9,
+   "etd_day": 11,
+   "eta_day": 30,
+   "allocation_feu": 3.0,
+   "capacity_feu": 12.0,
+   "confirmed_feu": 3.0,
+   "committed_feu": 3.0
+  },
+  {
+   "id": "DORM-DPS-W02",
+   "carrier": "DORM",
+   "service": "DPS",
+   "lane": "CNYTN-USLAX",
+   "week": 2,
+   "cutoff_day": 16,
+   "etd_day": 18,
+   "eta_day": 36,
+   "allocation_feu": 0.0,
+   "capacity_feu": 10.0,
+   "confirmed_feu": 0.0,
+   "committed_feu": 0.0
+  }
+ ]
+}

@@ -1,0 +1,283 @@
+{
+ "description": "Five replanning cycles over the first three weeks of the window. Each cycle advances the clock (departed sailings leave the problem), takes the carriers' answers to the space requested after the last plan, applies the events that arrived since, repairs the plan, and sends the carriers the new requests and releases.",
+ "cycles": [
+  {
+   "today": 3,
+   "label": "Week 0: blank sailing, vendor adds cargo, an expedite, extra allocation",
+   "events": [
+    {
+     "type": "sailing_cancelled",
+     "sailing": "ATLS-PSX-W02"
+    },
+    {
+     "type": "containers_added",
+     "containers": [
+      {
+       "id": "CNSHA-0901",
+       "po": "PO9901",
+       "vendor": "Orbit Toys",
+       "lane": "CNSHA-USLAX",
+       "size": "40HC",
+       "ready_day": 9,
+       "promise_day": 31
+      },
+      {
+       "id": "CNSHA-0902",
+       "po": "PO9901",
+       "vendor": "Orbit Toys",
+       "lane": "CNSHA-USLAX",
+       "size": "40HC",
+       "ready_day": 9,
+       "promise_day": 31
+      },
+      {
+       "id": "CNSHA-0903",
+       "po": "PO9901",
+       "vendor": "Orbit Toys",
+       "lane": "CNSHA-USLAX",
+       "size": "40HC",
+       "ready_day": 10,
+       "promise_day": 32
+      },
+      {
+       "id": "CNSHA-0904",
+       "po": "PO9902",
+       "vendor": "Orbit Toys",
+       "lane": "CNSHA-USLAX",
+       "size": "20GP",
+       "ready_day": 10,
+       "promise_day": 33
+      },
+      {
+       "id": "CNSHA-0905",
+       "po": "PO9902",
+       "vendor": "Orbit Toys",
+       "lane": "CNSHA-USLAX",
+       "size": "40HC",
+       "ready_day": 11,
+       "promise_day": 34
+      }
+     ]
+    },
+    {
+     "type": "container_expedited",
+     "container": "CNYTN-0112",
+     "promise_day": 28
+    },
+    {
+     "type": "allocation_changed",
+     "sailing": "BORS-TP2-W02",
+     "allocation_feu": 7
+    }
+   ]
+  },
+  {
+   "today": 8,
+   "label": "Week 1: carrier delay and roll, cargo slips, a cancellation, equipment change, allocation cut",
+   "events": [
+    {
+     "type": "sailing_delayed",
+     "sailing": "BORS-TP1-W02",
+     "days": 5
+    },
+    {
+     "type": "container_rolled",
+     "container": "CNNGB-0176"
+    },
+    {
+     "type": "cargo_ready_changed",
+     "container": "CNYTN-0120",
+     "ready_day": 16
+    },
+    {
+     "type": "cargo_ready_changed",
+     "container": "CNSHA-0024",
+     "ready_day": 18
+    },
+    {
+     "type": "container_cancelled",
+     "container": "CNNGB-0184"
+    },
+    {
+     "type": "container_changed",
+     "container": "CNSHA-0020",
+     "size": "20GP"
+    },
+    {
+     "type": "allocation_changed",
+     "sailing": "DORM-DEC-W03",
+     "allocation_feu": 1
+    }
+   ]
+  },
+  {
+   "today": 15,
+   "label": "Week 2: spot space sold out, planner lock, more vendor cargo",
+   "events": [
+    {
+     "type": "spot_changed",
+     "sailing": "COBT-CPX-W03",
+     "spot_feu": 0
+    },
+    {
+     "type": "container_locked",
+     "container": "CNYTN-0120",
+     "sailing": "BORS-TP2-W03"
+    },
+    {
+     "type": "containers_added",
+     "containers": [
+      {
+       "id": "CNNGB-0951",
+       "po": "PO9951",
+       "vendor": "Quarry Ceramics",
+       "lane": "CNNGB-USSAV",
+       "size": "40HC",
+       "ready_day": 16,
+       "promise_day": 60
+      },
+      {
+       "id": "CNNGB-0952",
+       "po": "PO9951",
+       "vendor": "Quarry Ceramics",
+       "lane": "CNNGB-USSAV",
+       "size": "40HC",
+       "ready_day": 17,
+       "promise_day": 61
+      },
+      {
+       "id": "CNNGB-0953",
+       "po": "PO9952",
+       "vendor": "Quarry Ceramics",
+       "lane": "CNNGB-USSAV",
+       "size": "40GP",
+       "ready_day": 18,
+       "promise_day": 58
+      },
+      {
+       "id": "CNNGB-0954",
+       "po": "PO9952",
+       "vendor": "Quarry Ceramics",
+       "lane": "CNNGB-USSAV",
+       "size": "40HC",
+       "ready_day": 18,
+       "promise_day": 62
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "today": 17,
+   "label": "Peak-season surge: a vendor adds 10 FEU for Shanghai to Los Angeles, on top of a 14 FEU weekly allocation",
+   "events": [
+    {
+     "type": "containers_added",
+     "containers": [
+      {
+       "id": "CNSHA-0911",
+       "po": "PO9950",
+       "vendor": "Orbit Toys",
+       "lane": "CNSHA-USLAX",
+       "size": "40HC",
+       "ready_day": 17,
+       "promise_day": 41
+      },
+      {
+       "id": "CNSHA-0912",
+       "po": "PO9950",
+       "vendor": "Orbit Toys",
+       "lane": "CNSHA-USLAX",
+       "size": "40HC",
+       "ready_day": 18,
+       "promise_day": 42
+      },
+      {
+       "id": "CNSHA-0913",
+       "po": "PO9950",
+       "vendor": "Orbit Toys",
+       "lane": "CNSHA-USLAX",
+       "size": "40HC",
+       "ready_day": 19,
+       "promise_day": 43
+      },
+      {
+       "id": "CNSHA-0914",
+       "po": "PO9950",
+       "vendor": "Orbit Toys",
+       "lane": "CNSHA-USLAX",
+       "size": "40HC",
+       "ready_day": 17,
+       "promise_day": 41
+      },
+      {
+       "id": "CNSHA-0915",
+       "po": "PO9950",
+       "vendor": "Orbit Toys",
+       "lane": "CNSHA-USLAX",
+       "size": "40HC",
+       "ready_day": 18,
+       "promise_day": 42
+      },
+      {
+       "id": "CNSHA-0916",
+       "po": "PO9950",
+       "vendor": "Orbit Toys",
+       "lane": "CNSHA-USLAX",
+       "size": "40HC",
+       "ready_day": 19,
+       "promise_day": 43
+      },
+      {
+       "id": "CNSHA-0917",
+       "po": "PO9951",
+       "vendor": "Orbit Toys",
+       "lane": "CNSHA-USLAX",
+       "size": "40HC",
+       "ready_day": 17,
+       "promise_day": 41
+      },
+      {
+       "id": "CNSHA-0918",
+       "po": "PO9951",
+       "vendor": "Orbit Toys",
+       "lane": "CNSHA-USLAX",
+       "size": "40HC",
+       "ready_day": 18,
+       "promise_day": 42
+      },
+      {
+       "id": "CNSHA-0919",
+       "po": "PO9951",
+       "vendor": "Orbit Toys",
+       "lane": "CNSHA-USLAX",
+       "size": "40HC",
+       "ready_day": 19,
+       "promise_day": 43
+      },
+      {
+       "id": "CNSHA-0920",
+       "po": "PO9951",
+       "vendor": "Orbit Toys",
+       "lane": "CNSHA-USLAX",
+       "size": "40HC",
+       "ready_day": 17,
+       "promise_day": 41
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "today": 19,
+   "label": "Carriers answer the surge requests; one surge container slips a day",
+   "events": [
+    {
+     "type": "cargo_ready_changed",
+     "container": "CNSHA-0911",
+     "ready_day": 18
+    }
+   ]
+  }
+ ]
+}
