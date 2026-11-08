@@ -66,7 +66,7 @@ python -m ocean_routing continuous --start out/plan-optimum.json --offline
    it reads records, never solver output or the certificate.
 3. **Pack versions are immutable.** Any change under `pack/` needs a new
    `version` in both `pack/pack.yaml` and the manifest. Re-publishing a version
-   with different content is refused with `422 solver_pack_rejected`.
+   with different content is refused: `409 solver_pack_version_conflict` from the current server, `422 solver_pack_rejected` from earlier releases.
 4. **The solver is generic.** Express behaviour as manifest rules over fields
    the request carries. Never add ocean-specific logic to the request shape or
    expect it from the solver.

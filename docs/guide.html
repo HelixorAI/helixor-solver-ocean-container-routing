@@ -41,6 +41,10 @@ pre code{background:none;padding:0}
 nav.toc{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:24px 0}
 nav.toc ol{margin:6px 0 0;padding-left:20px;columns:2;column-gap:28px}
 nav.toc li{break-inside:avoid;font-size:.95rem}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin:12px 0}
+.pair pre{margin:0;font-size:12px}
+.pair .kicker{margin:0 0 4px}
+td code{overflow-wrap:anywhere}
 @media (max-width:600px){nav.toc ol{columns:1}}
 figure{margin:20px 0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
 figure svg{display:block;width:100%;height:auto;color:var(--text)}
@@ -99,6 +103,8 @@ svg text.m{fill:var(--muted)}
   figure svg{min-width:0}
   table,tr,.scenario,.cards .card,.note,pre{break-inside:avoid}
   .scroll-x{overflow:visible}
+  .pair{grid-template-columns:1fr}
+  .pair>div{break-inside:avoid}
   pre{white-space:pre-wrap;overflow:visible}
   a{color:var(--accent);text-decoration:none}
   .repo a::after{content:none}
@@ -129,6 +135,9 @@ svg text.m{fill:var(--muted)}
     <li><a href="#s-space">Scenario: asking carriers for more space</a></li>
     <li><a href="#s-surge">Scenario: a peak-season surge</a></li>
     <li><a href="#results">How good are the plans?</a></li>
+    <li><a href="#api">Calling the Solver API</a></li>
+    <li><a href="#sdk">A typed client, generated from the contract: SDK vs raw REST</a></li>
+    <li><a href="#local">Running the solver locally: the embedded runtime</a></li>
     <li><a href="#run">Run it yourself</a></li>
     <li><a href="#glossary">Glossary</a></li>
   </ol>
@@ -570,10 +579,427 @@ svg text.m{fill:var(--muted)}
   <li><strong>One model to maintain.</strong> The equations come from the manifest, so a change to a rule, a weight or a customer's configuration reaches the exact method and the search at once. Nobody keeps a second copy in step.</li>
   <li><strong>Every answer stays checkable.</strong> Whichever method produced the plan, the certificate scores it against the same declared rules, and the independent scorer re-checks it.</li>
 </ul>
-<div class="note info"><strong>Status.</strong> In this example the MIP is written by hand from the manifest, as a yardstick. Generating it from the manifest, and choosing between exact solving and search per request, is planned and not yet part of the hosted solver. Rules about sequences and timing along a route, and very large instances, will stay with search.</div>
+<div class="note info"><strong>Status.</strong> In this example the MIP is written by hand from the manifest, as a yardstick. The current Solver server code also reads the manifest's rules and, when every rule converts, returns its plan with a proof: the demo-week solve in <a href="#api">section 12</a> came back with <code>proven_optimal: true</code>. That has not been confirmed on the hosted service yet, so read <code>proven_optimal</code> in each answer rather than assume it. Rules about sequences and timing along a route, and very large instances, will stay with search.</div>
 
 <!-- 12 -->
-<h2 id="run">12. Run it yourself</h2>
+<h2 id="api">12. Calling the Solver API</h2>
+<p>Every hosted command in this repository makes the same few REST calls, and <code>ocean_routing/client.py</code> is the shortest complete client. This section documents those calls for this problem type: what to send, what comes back, and how to act on it. Every request and response below was run against a Helixor Solver server with pack 2.4 published (sha256 <code>fe84dcc6…8e34418</code>), and the values shown are the ones it returned. That server ran locally with sign-in switched off, so <code>$SOLVER_TOKEN</code> stands for the token the hosted service checks.</p>
+
+<h3>Before the first solve: publish and select the pack</h3>
+<p>The model is not in the request. Publishing the pack makes its problem type, <code>ocean_container_routing</code>, available to your organization, and every solve of that type runs the <strong>active</strong> version of the pack. Nothing in the solve body picks a manifest. A request that carries its own <code>options.manifest</code> is refused by a default deployment (<code>422 unsupported_problem_type</code>), so a solve runs only rules that were validated and admitted with a pack.</p>
+<div class="scroll-x"><table>
+  <thead><tr><th>Call</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td><code>POST /api/v1/solver-packs/validations?expected_sha256=…</code></td><td>Validates the zip (body <code>application/zip</code>) without storing it. The demo pack answers <code>ADMITTED</code>, 0 errors, 0 warnings.</td></tr>
+    <tr><td><code>POST /api/v1/solver-packs?activate=true&amp;expected_sha256=…</code></td><td>Stores the version and makes it active. A version is immutable. Publishing 2.4 again with different bytes is refused with <code>409 solver_pack_version_conflict</code>, which names both hashes. Earlier server releases answer <code>422 solver_pack_rejected</code>. Either way, any change needs a new version.</td></tr>
+    <tr><td><code>GET /api/v1/solver-packs/ocean_container_routing/versions</code></td><td>Every stored version, with <code>active</code>: the <code>pack_id</code>, <code>version</code> and <code>sha256</code> that solves run.</td></tr>
+    <tr><td><code>GET /api/v1/solver-packs/ocean_container_routing/history</code></td><td>The pack's append-only log: one event per change, with <code>kind</code> (<code>published</code>, <code>activated</code>, <code>superseded</code>, <code>retired</code> or <code>deleted</code>), <code>version</code>, <code>sha256</code>, <code>actor</code>, <code>at</code> and the version it replaced.</td></tr>
+    <tr><td><code>GET /api/v1/manifests/ocean_container_routing</code></td><td>The active manifest: rules, <code>data_schema</code>, pinning and <code>ui.visualizations</code>. Read the KPIs from here (see <a href="#api-use">Using the answer</a>).</td></tr>
+    <tr><td><code>GET /api/v1/datasets/demo/scenarios/ocean_container_routing</code></td><td>The pack's demo scenarios. This pack has one: <code>two_lane_week</code> ("Two lanes, one week").</td></tr>
+    <tr><td><code>GET /api/v1/datasets/demo/problem/ocean_container_routing?scenario=two_lane_week</code></td><td>That scenario's request payload under <code>data</code>, the same file as <code>pack/datasets/two_lane_week.demo.json</code>: 41 containers, 15 sailings.</td></tr>
+  </tbody>
+</table></div>
+<p>The solve path never makes up data. A scenario is chosen only on the dataset route. To solve the demo week, you fetch it and send it as <code>problem</code>.</p>
+
+<h3>The solve request</h3>
+<pre><code>curl -X POST "$SOLVER_URL/api/v1/solve/ocean_container_routing" \
+  -H "Authorization: Bearer $SOLVER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "X-Helixor-Solve-Id: demo-week-0001" \
+  --data-binary @solve-demo.json</code></pre>
+<p>The path parameter is the pack's problem type. The headers:</p>
+<div class="scroll-x"><table>
+  <thead><tr><th>Header</th><th></th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>Authorization: Bearer &lt;token&gt;</code></td><td>required</td><td>Your own Helixor token. Your organization and its license come from the token. Do not send <code>X-Realm</code> or <code>X-Tenant-Id</code>. Without a token the answer is <code>401</code> with <code>failure_code: invalid_token</code>.</td></tr>
+    <tr><td><code>Content-Type: application/json</code></td><td>required</td><td></td></tr>
+    <tr><td><code>X-Helixor-Solve-Id</code></td><td>optional</td><td>A name you choose for this solve: 8–128 letters, digits, <code>-</code> or <code>_</code>. Any other value is refused with <code>422 invalid_solve_id</code>. While the solve runs, and for 10 minutes after it ends, <code>GET /api/v1/solve/runs/{id}</code> shows its <code>status</code>, <code>phase</code> and <code>job_id</code>. This is how a caller that lost the response finds the answer again. <code>POST /api/v1/solve/runs/{id}:stop</code> asks a running solve to stop.</td></tr>
+  </tbody>
+</table></div>
+<p>The body has three objects:</p>
+<pre><code>{
+  "problem": {
+    "containers": [
+      {"id": "CNSHA-0028", "lane": "CNSHA-USLAX", "size": "40HC", "feu": 1.0,
+       "ready_day": 12, "promise_day": 36,
+       "on_time_sailings": ["ATLS-PSX-W01", "ATLS-PSX-W02", "BORS-TP1-W01",
+                            "BORS-TP1-W02", "COBT-CPX-W01"]},
+      ...                                   // 41 containers
+    ],
+    "sailings": [
+      {"id": "ATLS-PSX-W01", "carrier": "ATLS", "service": "PSX", "lane": "CNSHA-USLAX",
+       "week": 1, "cutoff_day": 6, "etd_day": 8, "eta_day": 23,
+       "allocation_feu": 6.0, "capacity_feu": 10.0,
+       "confirmed_feu": 6.0, "committed_feu": 6.0},
+      ...                                   // 15 sailings
+    ]
+  },
+  "solver": {"mode": "local"},
+  "options": {}
+}</code></pre>
+<div class="scroll-x"><table>
+  <thead><tr><th>Field</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>problem.containers[]</code></td><td>The entities. The manifest's <code>data_schema</code> requires <code>id</code>, <code>lane</code>, <code>feu</code>, <code>ready_day</code>, <code>promise_day</code> and <code>on_time_sailings</code> (the ids of the sailings on the container's lane that arrive by <code>promise_day</code>; your lowering derives this list). The rule views also read <code>size</code>.</td></tr>
+    <tr><td><code>problem.sailings[]</code></td><td>The groups. Required: <code>id</code>, <code>lane</code>, <code>cutoff_day</code>, <code>eta_day</code>, <code>allocation_feu</code>, <code>capacity_feu</code> (allocation plus the spot space on sale), <code>confirmed_feu</code> (space the carrier has acknowledged) and <code>committed_feu</code> (acknowledged plus requested). The views also read <code>carrier</code>, <code>week</code> and <code>etd_day</code>.</td></tr>
+    <tr><td><code>problem.prior_plan</code></td><td>Repair only: the previous plan, as <code>{"container id": "sailing id"}</code>.</td></tr>
+    <tr><td><code>problem.pins[]</code></td><td>Repair only: <code>{"entity": id, "mode": "frozen" | "forbid" | "prefer", "group": sailing id}</code>. <code>frozen</code> keeps the container on <code>group</code>. <code>forbid</code> keeps it off <code>group</code>. <code>prefer</code> keeps it on its prior sailing unless moving pays more than <code>change_cost</code>.</td></tr>
+    <tr><td><code>problem.pin_default</code></td><td>Repair only: the mode for every container that has no pin of its own, for example <code>"prefer"</code>.</td></tr>
+    <tr><td><code>problem.change_cost</code></td><td>Repair only: the price of moving a <code>prefer</code> container, in the same units as the rule weights (manifest default 25).</td></tr>
+    <tr><td><code>solver.mode</code></td><td>Execution mode. <code>"local"</code> runs the solve on the Solver service itself, and that is the mode this example uses. Asking for a GPU or cloud backend or device needs the <code>solver.gpu</code> entitlement. Without it the answer is <code>403 remote_solve_not_entitled</code>, with a <code>repair_hint</code> telling you to drop that option. Pinned solves always run on the service.</td></tr>
+    <tr><td><code>options</code></td><td>Send <code>{}</code> for this pack: the search budget comes from the manifest's <code>search:</code> block. <code>options.constraints</code> is an object of <code>{"rule id": {parameter overrides}}</code> (not a list). It can switch on a rule that a manifest leaves off and override a rule's parameters. It cannot switch a rule off: <code>{"minimize_spot": {"enabled": false}}</code> is accepted and ignored, and the penalty stays 1,550. Every rule in this pack is on by default. A list here currently fails with a plain <code>500</code>. Budget keys are checked against the service's ceilings: <code>time_limit_seconds: 9999</code> is refused with <code>422 input_limit_exceeded</code>, and <code>time_limit_seconds: 1</code> returned the same plan. Keys that start with <code>__</code> belong to the service and are refused with <code>422 reserved_option_key</code>.</td></tr>
+  </tbody>
+</table></div>
+<p>A repair sends the same records plus the previous plan and the pins. This request froze one container, forbade a second container's sailing, and kept every other container where it was unless moving it paid:</p>
+<pre><code>"problem": {
+  "containers": [...], "sailings": [...],
+  "prior_plan": {"CNSHA-0028": "ATLS-PSX-W02", "CNSHA-0029": "ATLS-PSX-W02", ...},
+  "pins": [{"entity": "CNSHA-0028", "mode": "frozen", "group": "ATLS-PSX-W02"},
+           {"entity": "CNSHA-0029", "mode": "forbid", "group": "ATLS-PSX-W02"}],
+  "pin_default": "prefer",
+  "change_cost": 25.0
+}</code></pre>
+
+<h3>What comes back</h3>
+<p>The demo week, solved (an excerpt; <code>…</code> marks lists and diagnostics left out):</p>
+<pre><code>HTTP/1.1 200 OK
+{
+  "status": "completed",
+  "job_id": "job-1cb4397b9ec1",
+  "solver_used": "helixor-solver-server-local",
+  "actual_provider": "local", "actual_device": "cpu", "solve_time_ms": 31,
+  "solution": {
+    "solved_by": "manifest",
+    "placements": [{"entity": "CNSHA-0028", "group": "ATLS-PSX-W02"},
+                   {"entity": "CNSHA-0029", "group": "ATLS-PSX-W02"}, …],
+    "entity_ids": ["CNSHA-0028", "CNSHA-0029", "CNSHA-0030", …],
+    "group_ids":  ["ATLS-PSX-W01", "ATLS-PSX-W02", "ATLS-PSX-W03", …],
+    "assignment": [[], [0, 1, 5, 8, 9, 12, 13, 16, 19, 20], …],
+    "groups_used": 9, "entities_placed": 41, "entities_total": 41,
+    "is_feasible": true, "penalty": 1550.0, "objective": 0.0,
+    "admission": {
+      "is_feasible": true, "score": -1550.0,
+      "eligibility_penalty": 0.0, "hard_penalty": 0.0,
+      "soft_penalty": 1550.0, "unplaced_penalty": 0.0,
+      "unplaced_entities": [], "unplaced_evaluated": true,
+      "evaluated_constraints": ["lane_match", "cargo_ready_by_cutoff", "sailing_capacity",
+        "on_time_delivery", "allocation_utilization", "minimize_spot", "days_late",
+        "unconfirmed_space", "new_space_request"],
+      "reason": "feasible with penalty: allocation_utilization (penalized, penalty 11.5 x weight 100); …",
+      "violations": [
+        {"name": "allocation_utilization", "is_hard": false, "penalty": 11.5,
+         "weight": 100.0, "weighted_penalty": 1150.0, "affected_groups": [0, 7, 9]},
+        {"name": "minimize_spot", "is_hard": false, "penalty": 5.0,
+         "weight": 40.0, "weighted_penalty": 200.0, "affected_groups": [1, 2, 10]},
+        …]
+    },
+    "exact": {"status": "optimal", "proven_optimal": true, …},
+    "unevaluable_rules": []
+  },
+  "result": {
+    "solution": {…}, "is_feasible": true, "admission": {…}, "manifest_driven": true,
+    "metadata": {"solver_pack": {"pack_id": "ocean_container_routing", "version": "2.4",
+      "sha256": "fe84dcc611140a630aa7506310449b296ac3be5b1e0f51568ba6db36d8e34418",
+      "requested_problem_type": "ocean_container_routing"}}
+  },
+  "objective_value": 0.0,
+  "solver_version": {"git_commit": "…", "build_time": "…", "image_tag": "…"}
+}</code></pre>
+<div class="scroll-x"><table>
+  <thead><tr><th>Field</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>status</code></td><td><code>completed</code> means the solve finished. It does <strong>not</strong> mean the plan is feasible: an infeasible plan also comes back <code>200</code>, <code>completed</code> (see the failure table).</td></tr>
+    <tr><td><code>job_id</code></td><td><code>GET /api/v1/solve/{job_id}</code> returns this same body to the caller that ran the solve, and <code>404</code> for an unknown id.</td></tr>
+    <tr><td><code>solution.placements[]</code></td><td>The plan: one <code>{entity, group}</code> per booked container, meaning container id and sailing id.</td></tr>
+    <tr><td><code>solution.entity_ids</code>, <code>group_ids</code>, <code>assignment</code></td><td>The same plan by index: <code>assignment[i]</code> lists the container indexes (into <code>entity_ids</code>) booked on sailing <code>group_ids[i]</code>. <code>groups_used</code>, <code>entities_placed</code> and <code>entities_total</code> count them.</td></tr>
+    <tr><td><code>solution.is_feasible</code>, <code>admission.is_feasible</code></td><td>The verdict under the pack's rules. Act only when it is <code>true</code>.</td></tr>
+    <tr><td><code>solution.penalty</code>, <code>admission.score</code></td><td>The plan's score: the total weighted penalty (1,550 here), and its negative. Lower penalty is better. The admission splits it into bands: <code>eligibility_penalty</code>, <code>hard_penalty</code>, <code>soft_penalty</code> and <code>unplaced_penalty</code>.</td></tr>
+    <tr><td><code>objective</code>, <code>objective_value</code></td><td>The cost of the manifest's declared <code>objectives</code>. This pack declares none and expresses everything as rules, so these are 0. Rank plans by <code>penalty</code>.</td></tr>
+    <tr><td><code>admission.evaluated_constraints</code></td><td>Every rule that judged the plan: all nine of the pack's rules.</td></tr>
+    <tr><td><code>admission.violations[]</code></td><td>One entry per rule that charged a penalty: <code>name</code>, <code>is_hard</code>, <code>penalty</code> (in the rule's own units: containers, FEU or days), <code>weight</code>, <code>weighted_penalty</code>, and <code>affected_groups</code> (indexes into <code>group_ids</code>). <code>reason</code> says the same in one sentence.</td></tr>
+    <tr><td><code>admission.unplaced_entities</code></td><td>Indexes (into <code>entity_ids</code>) of containers the plan could not book. It is empty in a usable plan.</td></tr>
+    <tr><td><code>solution.exact.status</code>, <code>proven_optimal</code></td><td>Whether the plan comes with a proof that no better plan exists under these rules: <code>"optimal"</code>, <code>true</code> for the demo week. When it is <code>false</code> the plan is still judged by the same rules, only without that proof. The other keys under <code>exact</code>, and the <code>improvement</code> block, are engine diagnostics, not part of the contract. Don't build on them.</td></tr>
+    <tr><td><code>solution.unevaluable_rules</code></td><td>Rules the engine could not evaluate on this request. It is empty here. Don't act on a plan where it is not.</td></tr>
+    <tr><td><code>solution.pins</code>, <code>result.pins</code></td><td>Repairs only: <code>requested</code>, <code>frozen</code>/<code>frozen_honored</code>, <code>forbid</code>/<code>forbid_honored</code>, <code>prefer</code>/<code>prefer_kept</code>/<code>prefer_moved</code>, <code>change_cost</code>, <code>changes_vs_prior</code>, <code>violations.frozen</code> and <code>violations.forbid</code> (both empty when every pin held), and <code>placement_provenance</code>, which marks each container <code>frozen</code>, <code>kept</code> or <code>moved</code>. In the repair above, 1 of 1 frozen and 1 of 1 forbid pins held, all 39 <code>prefer</code> containers stayed, and only the forbidden container moved (to COBT-CPX-W02). The penalty rose to 2,420, mainly because that container now arrives late (1,000 for the late container plus 50 for its 10 days).</td></tr>
+    <tr><td><code>result.metadata.solver_pack</code></td><td>Provenance: the <code>pack_id</code>, <code>version</code> and <code>sha256</code> of the pack whose rules produced this answer, and the problem type you asked for.</td></tr>
+    <tr><td><code>solver_used</code>, <code>actual_provider</code>, <code>actual_device</code>, <code>solve_time_ms</code>, <code>solver_version</code></td><td>Where and how long it ran (here on the service, on CPU) and the service's build stamp (<code>git_commit</code>, <code>build_time</code>, <code>image_tag</code>).</td></tr>
+  </tbody>
+</table></div>
+
+<p>The rule results for the demo week, read from <code>evaluated_constraints</code> and <code>violations</code>, with each rule's type taken from the manifest:</p>
+<div class="scroll-x"><table>
+  <thead><tr><th>Rule</th><th>Type</th><th class="n">Penalty</th><th class="n">Weight</th><th class="n">Weighted</th><th>Sailings named</th></tr></thead>
+  <tbody>
+    <tr><td><code>lane_match</code></td><td>eligibility</td><td class="n">0</td><td class="n"></td><td class="n">0</td><td></td></tr>
+    <tr><td><code>cargo_ready_by_cutoff</code></td><td>eligibility</td><td class="n">0</td><td class="n"></td><td class="n">0</td><td></td></tr>
+    <tr><td><code>sailing_capacity</code></td><td>hard</td><td class="n">0</td><td class="n"></td><td class="n">0</td><td></td></tr>
+    <tr><td><code>on_time_delivery</code></td><td>soft</td><td class="n">0</td><td class="n">1,000</td><td class="n">0</td><td></td></tr>
+    <tr><td><code>allocation_utilization</code></td><td>soft</td><td class="n">11.5 FEU</td><td class="n">100</td><td class="n">1,150</td><td>ATLS-PSX-W01, COBT-CPX-W02, BORS-TP2-W01</td></tr>
+    <tr><td><code>minimize_spot</code></td><td>soft</td><td class="n">5 FEU</td><td class="n">40</td><td class="n">200</td><td>ATLS-PSX-W02, ATLS-PSX-W03, BORS-TP2-W02</td></tr>
+    <tr><td><code>days_late</code></td><td>soft</td><td class="n">0</td><td class="n">5</td><td class="n">0</td><td></td></tr>
+    <tr><td><code>unconfirmed_space</code></td><td>soft</td><td class="n">5 FEU</td><td class="n">30</td><td class="n">150</td><td>the same three</td></tr>
+    <tr><td><code>new_space_request</code></td><td>soft</td><td class="n">5 FEU</td><td class="n">10</td><td class="n">50</td><td>the same three</td></tr>
+    <tr class="hi"><td colspan="4"><strong>Total</strong></td><td class="n"><strong>1,550</strong></td><td>feasible, proven optimal</td></tr>
+  </tbody>
+</table></div>
+<p>A rule without a weight blocks the plan if it is broken. A soft rule only charges its penalty. The decision block adds one more hard rule that the manifest does not list: <code>total_assignment</code>, which says every container must be booked. It appears in <code>violations</code> when a plan leaves containers unbooked.</p>
+
+<h3 id="api-failures">When the solve fails</h3>
+<p>The service fails closed. It refuses a request it cannot solve rather than answer something else, and a 422 fails the same way every time you repeat it. Failure bodies come in three shapes, so read the code from the right place:</p>
+<ul>
+  <li><strong>Solve failures</strong> (<code>missing_problem_data</code>, <code>input_limit_exceeded</code>, <code>reserved_option_key</code>, <code>unsupported_problem_type</code>, <code>remote_solve_not_entitled</code>, <code>solver_pack_version_conflict</code>) carry <code>failure_code</code> and <code>detail</code> at the top level. Input faults also carry <code>status: "unsupported"</code>, <code>problem_type</code>, <code>missing_inputs</code>, <code>error_class</code>, <code>http_status</code>, <code>job_id</code> and a <code>verdict</code> with <code>status: "failed"</code> and an <code>inputs_hash</code>.</li>
+  <li><strong>Request and caller checks</strong> (<code>invalid_solve_id</code>, <code>invalid_token</code>, and the run lookups) nest them one level down: <code>{"detail": {"failure_code": …, "detail": …}}</code>.</li>
+  <li><strong>A body of the wrong shape</strong>, such as <code>"solver": "local"</code>, is a 422 whose <code>detail</code> is a list of field errors with no <code>failure_code</code>. An unknown job is a 404 whose <code>detail</code> is a sentence.</li>
+</ul>
+<p>One gap: <code>options.constraints</code> sent as a list currently returns a plain <code>500</code> instead of a typed refusal. Send it as an object.</p>
+<div class="scroll-x"><table>
+  <thead><tr><th>HTTP</th><th><code>failure_code</code></th><th>Seen when</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr><td>200</td><td><em>none</em>: <code>is_feasible: false</code></td><td>The demo week with no spot space on sale (<code>capacity_feu = allocation_feu</code>). 39 of 41 containers were placed, <code>unplaced_entities: [19, 27]</code> (CNSHA-0047, CNYTN-0072), and <code>total_assignment</code> was broken (hard, penalty 2). The reason was <code>"infeasible: total_assignment (blocked, …)"</code>.</td><td>Do not act on the placements. Change the inputs (more space, later promises) and solve again.</td></tr>
+    <tr><td>422</td><td><code>missing_problem_data</code></td><td>A container without <code>on_time_sailings</code>. <code>missing_inputs: ["containers[0].on_time_sailings"]</code>.</td><td>Fix the lowering. Retrying unchanged fails the same way.</td></tr>
+    <tr><td>422</td><td><code>input_limit_exceeded</code></td><td><code>options.time_limit_seconds: 9999</code> ("exceeds the hosted ceiling of 600").</td><td>Stay under the ceiling, or leave the budget to the pack.</td></tr>
+    <tr><td>422</td><td><code>reserved_option_key</code></td><td>An option key starting with <code>__</code>.</td><td>Remove it.</td></tr>
+    <tr><td>422</td><td><code>unsupported_problem_type</code></td><td>A problem type with no active pack (the body lists <code>supported_problem_types</code>), or <code>options.manifest</code> in the request, which a default deployment refuses.</td><td>Publish and activate the pack, then solve its type.</td></tr>
+    <tr><td>422</td><td><code>invalid_solve_id</code></td><td>An <code>X-Helixor-Solve-Id</code> outside 8–128 letters, digits, <code>-</code>, <code>_</code>.</td><td>Use a valid name.</td></tr>
+    <tr><td>403</td><td><code>remote_solve_not_entitled</code></td><td><code>solver.mode: "gpu"</code> on an account without <code>solver.gpu</code>. Names the <code>entitlement</code> and a <code>repair_hint</code>.</td><td>Send <code>"mode": "local"</code>.</td></tr>
+    <tr><td>401</td><td><code>invalid_token</code></td><td>No bearer token.</td><td>Send your token.</td></tr>
+    <tr><td>404</td><td></td><td><code>GET /api/v1/solve/{job_id}</code> for an unknown job.</td><td>Use the <code>job_id</code> the solve returned, or look it up by solve id.</td></tr>
+  </tbody>
+</table></div>
+
+<h3 id="api-use">Using the answer</h3>
+<p>An HTTP 200 alone is never enough. The example's planner refuses an answer that is not feasible, that leaves a container unbooked, or that the independent scorer rejects. Against the raw response, a full acceptance check also covers the penalty bands, the rule evaluation and the pack's provenance:</p>
+<pre><code>body = response.json()                      # after checking response.status_code == 200
+sol, adm = body["solution"], body["solution"]["admission"]
+pack = body["result"]["metadata"]["solver_pack"]
+accepted = (
+    body["status"] == "completed"
+    and sol["is_feasible"] and adm["is_feasible"]
+    and adm["eligibility_penalty"] == 0 and adm["hard_penalty"] == 0
+    and not adm["unplaced_entities"]
+    and sol["entities_placed"] == sol["entities_total"]
+    and not sol["unevaluable_rules"]
+    and (pack["version"], pack["sha256"]) == ("2.4", PUBLISHED_SHA256)
+)
+if not accepted:
+    raise SystemExit(adm["reason"])         # keep the previous plan; never pass this one on
+
+by_container = {p["entity"]: p["group"] for p in sol["placements"]}
+by_sailing = {}
+for container, sailing in by_container.items():
+    by_sailing.setdefault(sailing, []).append(container)</code></pre>
+<p>Then, from your own records:</p>
+<ul>
+  <li><strong>Per container:</strong> <code>by_container</code> is the booking to make. CNSHA-0028 goes on ATLS-PSX-W02. In a repair, <code>pins.placement_provenance</code> tells you which bookings are new (<code>moved</code>) and which stand.</li>
+  <li><strong>Per sailing:</strong> add up the FEU on each sailing and compare it with that sailing's <code>allocation_feu</code>, <code>confirmed_feu</code> and <code>capacity_feu</code>. FEU above the allocation is spot, and FEU above <code>committed_feu</code> is space still to request from the carrier. In the demo week, ATLS-PSX-W02 carries 9 FEU on a 6 FEU allocation, and ATLS-PSX-W03 and BORS-TP2-W02 carry 1 FEU over theirs: 5 FEU of spot in total, all still to request. ATLS-PSX-W01 and COBT-CPX-W02 carry nothing, and BORS-TP2-W01 carries 2.5 FEU of its 5.</li>
+  <li><strong>Which sailings a rule names:</strong> map <code>affected_groups</code> through <code>group_ids</code>. That turns <code>minimize_spot</code>'s <code>[1, 2, 10]</code> into the three sailings above, which are the carriers to ask for space.</li>
+  <li><strong>KPIs and views:</strong> the pack declares them in the manifest's <code>ui.visualizations</code> (<code>GET /api/v1/manifests/ocean_container_routing</code>), not in the solve response. Each KPI names a rule and a measure, and you evaluate it from your records and the placements, the way <code>ocean_routing/report.py</code> and the pack's solution surface do. For the demo week they come out as: on time 100%, late containers 0, allocation used 73.9% (32.5 of 44 FEU), spot space 5 FEU, days late 0, on unacknowledged space 5 FEU, space still to request 5 FEU. These agree with the certificate: 11.5 FEU of allocation unused, and 5 FEU on <code>minimize_spot</code>. The other declared views, load by sailing, allocation used by week and carrier, the sailing schedule and late containers, bind to the same records and placements.</li>
+  <li><strong>Re-check it yourself:</strong> <code>python -m ocean_routing score</code> scores any plan from the records alone, without the solver.</li>
+</ul>
+<div class="note"><strong>Never read KPIs off an infeasible plan.</strong> In the no-spot week the views count the two unplaced containers as late (5 late, against 3 in <code>on_time_delivery</code>), and the plan cannot be booked anyway. Check feasibility first.</div>
+<p><strong>Handling failures.</strong> A 422 is a fault in the request: fix the input and send it again, because retrying unchanged repeats the failure. A 403 names the entitlement or option to drop. If the connection drops during a solve, don't start another solve straight away. Send every solve with an <code>X-Helixor-Solve-Id</code>, then read <code>GET /api/v1/solve/runs/{id}</code> for its <code>job_id</code> and fetch the answer with <code>GET /api/v1/solve/{job_id}</code>. Both are kept in the memory of the server instance that ran the solve. Behind several instances, or after a restart, the lookup can answer 404, and then you solve again. A stop request can answer <code>409 solve_not_stoppable</code> when the solve is running where a stop cannot reach it. Set your client timeout above the solve's budget: the generated client below defaults to 120 seconds. A repair should keep the previous plan until a new one passes the acceptance check.</p>
+
+<!-- 13 -->
+<h2 id="sdk">13. A typed client, generated from the contract</h2>
+<p>This repository calls the API with plain HTTP, so it stays public and needs nothing but <code>httpx</code>. Helixor also provides typed clients for its APIs. They are generated by Helixor's own SDK generator, <strong>helixor-sdk-gen</strong>, from each service's OpenAPI contract. For the Solver, the client is the Python package <code>helixor-solver-contract</code>. It covers solve, job status, pre-solve checks, recommendations, health and version.</p>
+<h3>How the client is produced</h3>
+<figure>
+<svg viewBox="0 0 760 150" role="img" aria-label="The Solver server's code produces its OpenAPI contract; the SDK generator turns the contract into a typed client and an operation-contracts file; tests check the client against payloads captured from the server application; the client is regenerated and compared before a tagged release.">
+  <defs><marker id="ar10" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+  <rect class="box" x="10" y="40" width="130" height="64" rx="8"/><text x="75" y="66" text-anchor="middle" class="b">Solver server</text><text x="75" y="84" text-anchor="middle" class="s m">its own code</text>
+  <rect class="box" x="170" y="40" width="130" height="64" rx="8"/><text x="235" y="66" text-anchor="middle" class="b">OpenAPI contract</text><text x="235" y="84" text-anchor="middle" class="s m">dumped, not written</text>
+  <rect class="accbox" x="330" y="40" width="130" height="64" rx="8"/><text x="395" y="66" text-anchor="middle" class="b">helixor-sdk-gen</text><text x="395" y="84" text-anchor="middle" class="s">typed client +</text><text x="395" y="98" text-anchor="middle" class="s">operation contracts</text>
+  <rect class="box" x="490" y="40" width="120" height="64" rx="8"/><text x="550" y="66" text-anchor="middle" class="b">Checked</text><text x="550" y="84" text-anchor="middle" class="s m">real payloads,</text><text x="550" y="98" text-anchor="middle" class="s m">regenerated, compared</text>
+  <rect class="okbox" x="640" y="40" width="110" height="64" rx="8"/><text x="695" y="66" text-anchor="middle" class="b">Tagged</text><text x="695" y="84" text-anchor="middle" class="s">release</text>
+  <line x1="140" y1="72" x2="168" y2="72" class="st" marker-end="url(#ar10)"/>
+  <line x1="300" y1="72" x2="328" y2="72" class="st" marker-end="url(#ar10)"/>
+  <line x1="460" y1="72" x2="488" y2="72" class="st" marker-end="url(#ar10)"/>
+  <line x1="610" y1="72" x2="638" y2="72" class="st" marker-end="url(#ar10)"/>
+  <text x="380" y="135" text-anchor="middle" class="s m">a server change reaches the client only by regenerating it from the new contract</text>
+</svg>
+<figcaption>Nobody writes the client by hand. The Solver server produces its own OpenAPI contract. The generator reads that contract and emits the client plus <code>operation-contracts.json</code>, a language-neutral record of every operation with a hash of its exact wire shape. Tests parse payloads captured from the server application, and before a release the client is regenerated and compared with what is committed.</figcaption>
+</figure>
+<ol>
+  <li><strong>The contract comes from the server.</strong> The Solver server dumps the solve-contract part of its OpenAPI from the same models that validate requests. Before writing this section we dumped the contract from the current server and regenerated the client from it. The solve request, solve response and failure envelope were identical to the published release. Regenerating from the release's own contract reproduced the published client byte for byte, and its tests passed. The only difference from today's dump was the web framework's generic validation-error schema, which no solve call reads.</li>
+  <li><strong>The generator turns the contract into a client.</strong> It produces typed request and response models, one method per operation, bearer authentication, typed exceptions, and the runtime policy set in the project's configuration (timeouts and retries).</li>
+  <li><strong>The output is checked, then released.</strong> The generated models must parse payloads captured from the server application, and the client is regenerated from the committed contract and compared file by file before a release. Releases are tagged, for example <code>helixor-solver-contract-sdk/v0.1.0</code>. The same generator produces the clients for Helixor's other APIs, in Python, TypeScript and Java.</li>
+</ol>
+<h3>Installing it</h3>
+<p>The package is distributed from a private Helixor repository under a proprietary license. It is not on a public package index, so ask Helixor for access. Without access, use raw REST, which needs nothing private.</p>
+<pre><code>pip install "helixor-solver-contract @ git+https://github.com/HelixorAI/helixor-sdk-artifacts.git@helixor-solver-contract-sdk/v0.1.0#subdirectory=helixor-solver/python"</code></pre>
+
+<h3 id="sdk-vs-rest">The same solve, two ways</h3>
+<p>Both columns send the request from <a href="#api">section 12</a> to the same server and read the same answer. The comments show what each one printed.</p>
+<div class="pair">
+<div><p class="kicker">Raw REST</p>
+<pre><code>import json, os, httpx
+
+problem = json.load(open(
+    "pack/datasets/two_lane_week.demo.json"))
+
+resp = httpx.post(
+    f"{os.environ['SOLVER_URL']}"
+    "/api/v1/solve/ocean_container_routing",
+    headers={
+        "Authorization":
+            f"Bearer {os.environ['SOLVER_TOKEN']}",
+        "X-Helixor-Solve-Id": "rest-demo-week-01",
+    },
+    json={"problem": problem,
+          "solver": {"mode": "local"},
+          "options": {}},
+    timeout=120,
+)
+if resp.status_code != 200:
+    raise SystemExit(f"{resp.status_code} "
+                     f"{failure_code(resp.json())}")
+
+answer = resp.json()               # a dict
+sol = answer["solution"]
+print(answer["status"], sol["is_feasible"],
+      sol["penalty"], answer["job_id"])
+# completed True 1550.0 job-…</code></pre></div>
+<div><p class="kicker">Generated SDK</p>
+<pre><code>import json, os
+from helixor_solver_contract import ApiClient, models
+from helixor_solver_contract.errors import (
+    ApiHttpException)
+
+problem = json.load(open(
+    "pack/datasets/two_lane_week.demo.json"))
+
+with ApiClient(
+    base_url=os.environ["SOLVER_URL"],
+    bearer_token=os.environ["SOLVER_TOKEN"],
+    headers={"X-Helixor-Solve-Id": "sdk-demo-week-01"},
+) as client:
+    try:
+        answer = client.solve_api_v1_solve_problem_type_post(
+            "ocean_container_routing",
+            models.ApiSolveRequest(
+                problem=problem,
+                solver={"mode": "local"}, options={}),
+        )                          # HostedSolveResponse
+    except ApiHttpException as exc:
+        raise SystemExit(f"{exc.raw_response.status_code} "
+                         f"{failure_code(exc.parsed_error)}")
+
+sol = answer.solution
+print(answer.status, sol["is_feasible"],
+      sol["penalty"], answer.job_id)
+# completed True 1550.0 job-…</code></pre></div>
+</div>
+<p>Both columns use one small helper, because failure codes sit at the top level or one level down (see <a href="#api-failures">When the solve fails</a>):</p>
+<pre><code>def failure_code(body):
+    if isinstance(body, dict):
+        if "failure_code" in body:
+            return body["failure_code"]
+        if isinstance(body.get("detail"), dict):
+            return body["detail"].get("failure_code")
+    return None                    # a field-error list or a sentence</code></pre>
+<p>Both return the same plan, and in both <code>solution</code> is a JSON object. The SDK types the response <em>envelope</em>, but the plan the manifest engine returns inside <code>solution</code> and <code>result</code> is open, because its fields depend on the pack. So the acceptance check in <a href="#api-use">Using the answer</a> reads the same in both, and so does the failure handling: <code>exc.parsed_error</code> is the same failure body you would parse from <code>resp.json()</code>, in the same three shapes.</p>
+
+<h3>SDK methods and types against the REST calls</h3>
+<div class="scroll-x"><table>
+  <thead><tr><th>REST call</th><th>SDK method on <code>ApiClient</code></th><th>Request type → result type</th></tr></thead>
+  <tbody>
+    <tr><td><code>POST /api/v1/solve/{problem_type}</code></td><td><code>solve_api_v1_solve_problem_type_post(problem_type, body)</code></td><td><code>ApiSolveRequest</code> → <code>HostedSolveResponse</code></td></tr>
+    <tr><td><code>GET /api/v1/solve/{job_id}</code></td><td><code>job_status_api_v1_solve_job_id_get(job_id)</code></td><td>→ <code>dict</code></td></tr>
+    <tr><td><code>POST /api/v1/feasibility/check</code></td><td><code>feasibility_api_v1_feasibility_check_post(body)</code></td><td><code>FeasibilityCheckRequest</code> → <code>FeasibilityCheckResponse</code></td></tr>
+    <tr><td><code>POST /api/v1/feasibility/check-quick</code></td><td><code>feasibility_quick_api_v1_feasibility_check_quick_post(body)</code></td><td><code>dict</code> → <code>QuickFeasibilityResponse</code></td></tr>
+    <tr><td><code>POST /api/v1/recommendations/{problem_type}</code></td><td><code>recommendations_api_v1_recommendations_problem_type_post(problem_type, body)</code></td><td><code>RecommendationRequest</code> → <code>RecommendationsResponse</code></td></tr>
+    <tr><td><code>GET /api/v1/recommendations/{problem_type}/types</code></td><td><code>recommendation_types_api_v1_recommendations_problem_type_types_get(problem_type)</code></td><td>→ <code>RecommendationTypesResponse</code></td></tr>
+    <tr><td><code>GET /api/v1/health</code>, <code>GET /api/v1/version</code></td><td><code>health_api_v1_health_get()</code>, <code>version_api_v1_version_get()</code></td><td>→ <code>dict</code></td></tr>
+  </tbody>
+</table></div>
+<p>The pack and manifest routes (publish, versions, history, manifests, demo datasets) are not in this client: it covers the solve contract only. Call them over REST as in <a href="#api">section 12</a>, or use <code>python -m ocean_routing publish-pack</code>.</p>
+<p>The two solve types, field by field:</p>
+<div class="scroll-x"><table>
+  <thead><tr><th>JSON field</th><th>SDK type</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td colspan="3"><strong><code>ApiSolveRequest</code></strong> (the request body)</td></tr>
+    <tr><td><code>problem</code>, <code>solver</code>, <code>options</code>, <code>context</code></td><td><code>dict[str, Any] | None</code></td><td>Each must be an object. <code>ApiSolveRequest(solver="local")</code> raises a validation error before anything is sent; over REST the server would refuse it.</td></tr>
+    <tr><td colspan="3"><strong><code>HostedSolveResponse</code></strong> (the 200 answer)</td></tr>
+    <tr><td><code>status</code></td><td><code>str</code> (required)</td><td><code>"completed"</code>. The only required field.</td></tr>
+    <tr><td><code>job_id</code>, <code>solver_used</code></td><td><code>str | None</code></td><td></td></tr>
+    <tr><td><code>objective_value</code></td><td><code>float | None</code></td><td>0.0 for this pack: rank plans by <code>solution["penalty"]</code>.</td></tr>
+    <tr><td><code>solution</code>, <code>result</code></td><td><code>dict[str, Any] | None</code></td><td>The plan, certificate and pack provenance, documented in <a href="#api">section 12</a>.</td></tr>
+    <tr><td><code>contract</code></td><td><code>SolveOutcome | None</code></td><td>The typed solve-contract verdict that some built-in problem types return. Pack problem types do not, so it is <code>None</code> here.</td></tr>
+    <tr><td><code>solve_time_ms</code>, <code>actual_provider</code>, <code>actual_device</code>, <code>solver_version</code></td><td>attributes, untyped</td><td>Not in the contract, but kept: <code>answer.actual_provider</code> reads <code>"local"</code>, and <code>answer.model_extra</code> lists them all.</td></tr>
+  </tbody>
+</table></div>
+
+<h3>What the SDK adds, and what it doesn't</h3>
+<div class="scroll-x"><table>
+  <thead><tr><th></th><th>Raw REST</th><th>Generated SDK</th></tr></thead>
+  <tbody>
+    <tr><td>Host</td><td>You build each URL.</td><td><code>base_url</code> is required. There is no default host, so the client never calls an address you did not configure.</td></tr>
+    <tr><td>Auth</td><td>You add <code>Authorization: Bearer …</code> to every call.</td><td><code>bearer_token=</code>, either a string or a function returning a fresh token, is sent on every call. Other headers, such as <code>X-Helixor-Solve-Id</code>, go in <code>headers=</code>.</td></tr>
+    <tr><td>Request shape</td><td>Checked by the server: a wrong type comes back as a 422.</td><td>Field types are checked when you build <code>ApiSolveRequest</code>, before sending. Unknown extra fields are passed through, not refused, because this client is configured to allow them.</td></tr>
+    <tr><td>Response shape</td><td>Whatever JSON arrives.</td><td>Validated against <code>HostedSolveResponse</code>. A field a later server release adds is kept, never a parse failure: responses are tolerant.</td></tr>
+    <tr><td>Failures</td><td>Check <code>status_code</code>, then parse the body.</td><td>A non-2xx answer raises <code>ApiHttpException</code>, with <code>raw_response.status_code</code> and the failure body in <code>parsed_error</code> (a <code>dict</code>). A response that breaks the contract raises <code>ApiResponseValidationException</code>. A broken connection still raises the HTTP library's own error, as it would over REST.</td></tr>
+    <tr><td>Retries and timeouts</td><td>Yours to write.</td><td>120 s default timeout (pass <code>timeout=</code> to change it). Up to 2 attempts on 408, 429, 502, 503 and 504, for GET, HEAD and OPTIONS only. A solve (POST) is never retried, so it never runs twice behind your back.</td></tr>
+    <tr><td>Contract record</td><td>None.</td><td><code>OPERATION_CONTRACTS</code> lists every operation with a <code>sha256</code> of its wire shape, so you can tell exactly which contract the client was built from.</td></tr>
+    <tr><td>Plan contents</td><td colspan="2">The same in both: an open JSON object you read with the fields in <a href="#api">section 12</a>.</td></tr>
+  </tbody>
+</table></div>
+<p>Choose the SDK when you want the envelope, authentication, failure handling and retries settled for you, and want each upgrade to be a new, versioned client. Choose raw REST when you cannot take a private dependency, or need the pack routes the SDK leaves out. This repository uses raw REST for both reasons.</p>
+
+<!-- 14 -->
+<h2 id="local">14. Running the solver locally: the embedded runtime</h2>
+<p>Everything above calls a Solver service over the network. The <strong>Helixor Decision Runtime</strong> (the proprietary <code>helixor-runtime</code> package; ask Helixor for access) can instead run Helixor's solver inside your own process. In that mode there is no network call, the records never leave your host, and the answer comes back as a function result. This section shows how to switch it on, what it needs, and what it can run today. Every result here comes from runtime code current on 2026-11-08, run on this example's demo week.</p>
+
+<h3>One explicit switch</h3>
+<pre><code>from pii_guard.license import LicenseVerifier
+from helixor_runtime import HelixorSolver
+
+# Embedded: helixor-solvers runs in this process and never calls a service.
+license = LicenseVerifier.load("helixor.hxlic")         # verifies the signature
+solver = HelixorSolver(mode="embedded", license=license)
+
+# Hosted: the same calls, delegated to a Solver service through its generated client.
+solver = HelixorSolver(mode="hosted", base_url=SOLVER_URL, auth=SOLVER_TOKEN)</code></pre>
+<p>The mode has no default, and neither mode falls back to the other. <code>HelixorSolver(mode="")</code> raises <code>SolverConfigurationError</code>. A missing engine or an unreachable service is also a typed error, never a quiet switch to the other mode. Both modes expose <code>solve</code>, <code>feasibility</code> and <code>recommendations</code>, return the same solve contract (<code>verdict</code>, the plan only when it is feasible, named <code>shortfalls</code>, ranked <code>alternates</code>, a <code>certificate</code>, and <code>metadata.model</code> saying which mode answered), and raise the same typed errors. Install the <code>solvers</code> extra for routing; rostering needs <code>solvers-full</code>.</p>
+
+<h3>The license decides</h3>
+<p>The embedded mode runs only under a signed Helixor license whose entitlements cover the solver. The runtime checks it on every solve:</p>
+<div class="scroll-x"><table>
+  <thead><tr><th>License</th><th>Embedded routing solve</th></tr></thead>
+  <tbody>
+    <tr><td>none</td><td><code>SolverLicenseRequiredError</code>: the solver "requires a Helixor license; none was supplied"</td></tr>
+    <tr><td>Developer tier</td><td><code>LicenseEntitlementError</code>: not authorized, because its licensed solvers cover only <code>solver.tcn.*</code></td></tr>
+    <tr><td>Enterprise tier</td><td>solved: <code>verdict: "feasible"</code>, <code>metadata.model: "embedded"</code></td></tr>
+  </tbody>
+</table></div>
+<p>The hosted mode takes no license: the service authorizes each call by your token, as in <a href="#api">section 12</a>.</p>
+
+<h3>What it can run today, and what it can't</h3>
+<p>The runtime's solve contract covers two problem types: <code>vrp</code> (vehicle routing) and <code>rostering</code>. This example's problem type is a <strong>solver pack</strong>, and the embedded mode does not run solver packs yet. It refuses the type, by name, rather than answering something else:</p>
+<pre><code>problem = json.load(open("pack/datasets/two_lane_week.demo.json"))
+try:
+    solver.solve("ocean_container_routing", problem)
+except SolverOptionError as exc:
+    print(exc.failure_code, "|", exc)
+# unsupported_problem_type | no solve contract for problem type
+#   'ocean_container_routing'; supported: ['rostering', 'vrp']</code></pre>
+<p>The runtime's hosted mode can't serve this pack either. It expects a solve-contract answer, and a pack solve returns the plan and certificate documented in section 12 instead. It raises <code>SolverServiceError</code> ("answered … without a solve-contract answer"). For this problem, call the Solver API directly, over raw REST or the generated client (<a href="#sdk">section 13</a>).</p>
+
+<h3>Running this example on your own machine</h3>
+<p>To run the container routing pack locally today, point <code>SOLVER_URL</code> at a Solver server running on your own host instead of the hosted one. Then publish the pack to it (<code>python -m ocean_routing publish-pack</code>), and every command and example in sections 12 and 13 runs unchanged. That is how this guide's examples were produced: the server ran on the same machine as the client, and the demo week solved in about 30 ms once warm. The first solve on a freshly started server took about 45 seconds. The Solver server is not part of this repository.</p>
+<div class="scroll-x"><table>
+  <thead><tr><th></th><th>Hosted service</th><th>Solver server on your host</th><th>Embedded runtime</th></tr></thead>
+  <tbody>
+    <tr><td>Where it runs</td><td>Helixor's service</td><td>a separate process on your machine</td><td>inside your process</td></tr>
+    <tr><td>Called by</td><td>REST or the generated client</td><td>REST or the generated client</td><td>a function call</td></tr>
+    <tr><td>Authorized by</td><td>your bearer token</td><td>the server's own sign-in settings</td><td>your signed license</td></tr>
+    <tr><td>This pack (<code>ocean_container_routing</code>)</td><td>yes, once the pack is published</td><td>yes, once the pack is published (verified)</td><td><strong>not yet</strong>: <code>unsupported_problem_type</code></td></tr>
+    <tr><td><code>vrp</code>, <code>rostering</code></td><td>served (not run for this guide)</td><td>served (not run for this guide)</td><td>yes, with an entitled license (routing verified)</td></tr>
+  </tbody>
+</table></div>
+<div class="note"><strong>Not yet available.</strong> Running a solver pack in-process through <code>HelixorSolver(mode="embedded")</code> is not supported. Until it is, use the hosted service or a Solver server on your own host, and treat any other claim of an embedded pack solve as unverified.</div>
+
+<!-- 15 -->
+<h2 id="run">15. Run it yourself</h2>
 <p>Hosted solves need a Helixor account at <a href="https://helixor.dev">helixor.dev</a> whose organization holds a <strong>Helixor Solver license</strong>, plus the Solver API origin and a token for your account. The repository itself contains no solver. Everything marked <span class="pill off">offline</span> runs without a license.</p>
 <pre><code>git clone https://github.com/HelixorAI/helixor-solver-ocean-container-routing.git
 cd helixor-solver-ocean-container-routing
@@ -596,8 +1022,8 @@ pytest -q                                   # offline tests; live tests run only
 </table></div>
 <p>For hosted steps, copy <code>.env.example</code> to <code>.env</code>, fill in <code>SOLVER_URL</code> and <code>SOLVER_TOKEN</code>, and load it with <code>set -a &amp;&amp; . ./.env &amp;&amp; set +a</code>. Outputs land in <code>out/</code>. The <a href="https://github.com/HelixorAI/helixor-solver-ocean-container-routing#readme">README</a> has the full command reference and every measured table; the <a href="https://github.com/HelixorAI/helixor-solver-ocean-container-routing/blob/main/docs/TUTORIAL.md">tutorial</a> explains each rule and file in depth. Source: <a href="https://github.com/HelixorAI/helixor-solver-ocean-container-routing">https://github.com/HelixorAI/helixor-solver-ocean-container-routing</a>.</p>
 
-<!-- 13 -->
-<h2 id="glossary">13. Glossary</h2>
+<!-- 16 -->
+<h2 id="glossary">16. Glossary</h2>
 <div class="scroll-x"><table>
   <tbody>
     <tr><th>FEU</th><td>Forty-foot equivalent unit. A 40' container is 1 FEU, a 20' container 0.5.</td></tr>
