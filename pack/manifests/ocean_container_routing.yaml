@@ -1,4 +1,4 @@
-version: "2.3"
+version: "2.4"
 domain: OceanContainerRouting
 problem_type: ocean_container_routing
 policy_id: booking_consolidation
@@ -258,7 +258,8 @@ ui:
   # containers, groups = sailings) and the solution's placements; a KPI names a
   # rule and is evaluated from that rule's own contract and parameters, so a
   # renderer needs no ocean-routing knowledge. `python -m ocean_routing report`
-  # renders these today; the Solver UX does not yet read `ui.visualizations`.
+  # renders them as one page; the pack's problem and solution surfaces
+  # (pack/ui, built from ui/src) render them inside the Solver UX.
   visualizations:
     - id: plan_kpis
       type: kpi

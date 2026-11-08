@@ -1,5 +1,5 @@
 id: ocean_container_routing
-version: "2.3"
+version: "2.4"
 display_name: "Ocean Container Routing"
 description: "Book containers onto carrier space allocations and repair the plan as events arrive"
 modules: [solvers, ui]
@@ -11,3 +11,15 @@ datasets:
     uri: datasets/two_lane_week.demo.json
     scenario: two_lane_week
     label: Two lanes, one week
+surfaces:
+  - problem_type: ocean_container_routing
+    role: problem
+    uri: ui/ocean.problem.html
+    label: "Containers and sailings"
+    description: "Sailing space, weekly allocation by carrier and the sailing schedule before a plan is made."
+  - problem_type: ocean_container_routing
+    role: solution
+    uri: ui/ocean.solution.html
+    label: "Plan"
+    description: "The manifest's declared views of the plan: rule KPIs, load by sailing, allocation used by week and carrier, schedule and late containers."
+    primary: true

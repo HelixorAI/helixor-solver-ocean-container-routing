@@ -249,7 +249,8 @@ ui:
 ```
 
 `ui.surfaces.solve` makes the problem type appear on the Solver UX's solve
-page. `ui.visualizations` declares the charts. Section 6 renders them.
+page. `ui.visualizations` declares the charts. Section 6 renders them, and the
+pack's own UI surfaces render them inside the Solver UX.
 
 ## 4. Set up and publish the pack
 
@@ -279,13 +280,32 @@ pack/
   pack.yaml                              id, version, policy, manifest and dataset list
   manifests/ocean_container_routing.yaml the model
   datasets/two_lane_week.demo.json       a small request to try in the Solver UX
+  ui/ocean.problem.html                  Solver UX view of the containers and sailings
+  ui/ocean.solution.html                 Solver UX view of a plan
 ```
+
+The demo request is one peak week on the two Los Angeles lanes: 41
+containers ready in week 1 against the sailings of weeks 1 to 3. Each
+promise date was quoted from a sailing the container can catch, and the
+week's cargo exceeds the allocation on the early sailings. Every container
+can arrive on time, but only by buying space beyond the allocation: the
+proven optimum books 5 FEU of spot and delivers all 41 on time, while the
+allocation alone cannot carry the week at all.
+`python scripts/build_demo_dataset.py` rebuilds it from the generator
+(`ocean_routing/demo.py`).
+
+The two `ui/` pages are the pack's `surfaces` (roles `problem` and
+`solution`). Each is one self-contained HTML page built from `ui/src` by
+`python scripts/build_surfaces.py`, with no network access. The Solver UX
+fetches it from the pack and shows it in a sandboxed frame, sending it the
+request's records, the solve result and the manifest. It renders the same
+`ui.visualizations` as the report in section 6.
 
 ```bash
 python -m ocean_routing publish-pack
 ```
 
-This builds `dist/ocean_container_routing-2.3.zip` (byte-for-byte reproducible),
+This builds `dist/ocean_container_routing-2.4.zip` (byte-for-byte reproducible),
 asks the solver to validate it, uploads it, activates it, and reads the
 manifest back. A validation error stops it with the solver's reasons.
 
@@ -406,11 +426,13 @@ python -m ocean_routing report out/continuous/cycle-3-helixor.json \
 ```
 
 > **What about the Solver UX?** The Solver UX shows this problem type on its
-> solve page (that is what `ui.surfaces.solve` does) and shows the generic
-> panels every problem gets: the certificate's hard and soft totals and the
-> rule results. Its results view is a component chosen by problem type, and it
-> does not yet read `ui.visualizations` from a pack. Until it does, the
-> report command is how to see these charts.
+> solve page (that is what `ui.surfaces.solve` does) and the generic panels
+> every problem gets: the certificate's hard and soft totals and the rule
+> results. The charts come from the pack: **Visualize** under Data Input shows
+> the `problem` surface for the loaded request, and the solution panel shows
+> the `solution` surface for the plan. Both render these same declarations.
+> The report command remains the way to see them outside the Solver UX, and
+> it adds the replay sections.
 
 ## 7. Take over an existing plan
 

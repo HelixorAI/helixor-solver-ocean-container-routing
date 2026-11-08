@@ -21,8 +21,8 @@ sailings with the **hosted Helixor Solver**, called over its REST API.
 
 | Path | Role |
 |---|---|
-| `pack/pack.yaml`, `pack/manifests/ocean_container_routing.yaml` | the model: decision, 8 rules with weights, pinning, search budget, UX surfaces, `ui.visualizations` |
-| `pack/datasets/two_lane_week.demo.json` | small demo dataset the pack ships; must carry every field the rules name |
+| `pack/pack.yaml`, `pack/manifests/ocean_container_routing.yaml` | the model: decision, 8 rules with weights, pinning, search budget, UX surfaces, `ui.visualizations`; `pack.yaml` `surfaces` ships `pack/ui` |
+| `pack/datasets/two_lane_week.demo.json` | demo request the pack ships (`ocean_routing/demo.py`, `scripts/build_demo_dataset.py`): one peak week, every promise keepable only with spot space; must carry every field the rules name |
 | `ocean_routing/model.py` | `Container`, `Sailing`, `Scenario`, plan file IO |
 | `ocean_routing/lowering.py` | records to request: `on_time_sailings`, `capacity_feu`, `confirmed_feu`, `committed_feu`, prior plan, pins |
 | `ocean_routing/client.py` | REST client: publish pack, read manifest, solve |
@@ -33,6 +33,8 @@ sailings with the **hosted Helixor Solver**, called over its REST API.
 | `ocean_routing/optimum.py` | exact MIP of the same model (OR-Tools) |
 | `ocean_routing/pinning.py` | pinning scenarios: one disruption, one pin choice per run |
 | `ocean_routing/report.py` | renders the manifest's `ui.visualizations` as one HTML page |
+| `ui/src/surface.js`, `ui/src/surface.css` | the pack's Solver UX surfaces: the same views, in the browser; CSS shared with the report |
+| `ocean_routing/surfaces.py`, `pack/ui/*.html` | builds `pack/ui/ocean.{problem,solution}.html` from `ui/src` (`python scripts/build_surfaces.py`); committed, and the pack build refuses stale ones |
 | `ocean_routing/cli.py` | `python -m ocean_routing <command>` |
 | `data/scenario.json` | generated scenario (`python -m ocean_routing.generate`, seed 7, deterministic) |
 | `data/events/replay.json` | five event cycles for `continuous` |
@@ -80,6 +82,11 @@ python -m ocean_routing continuous --start out/plan-optimum.json --offline
    checks that.
 8. **Space acknowledgement.** Near-cutoff freezes apply only within
    `confirmed_feu`. A rejection caps the sailing at what the carrier accepted.
+
+9. **Surfaces agree with the report.** `ui/src/surface.js` implements the same
+   contract measures as `report.py`; `tests/test_surfaces.py` runs it under
+   Node and checks its KPIs against the report. Rebuild `pack/ui` after any
+   change to `ui/src` and bump the pack version.
 
 ## Documentation rules
 

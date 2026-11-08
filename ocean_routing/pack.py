@@ -12,10 +12,16 @@ FILES = [
     "pack.yaml",
     "manifests/ocean_container_routing.yaml",
     "datasets/two_lane_week.demo.json",
+    "ui/ocean.problem.html",
+    "ui/ocean.solution.html",
 ]
 
 
 def build(out_dir: Path = ROOT / "dist") -> Path:
+    from .surfaces import stale
+
+    if stale():
+        raise SystemExit(f"pack surfaces are stale, run python scripts/build_surfaces.py: {stale()}")
     descriptor = yaml.safe_load((PACK / "pack.yaml").read_text())
     out_dir.mkdir(parents=True, exist_ok=True)
     archive = out_dir / f"{descriptor['id']}-{descriptor['version']}.zip"
