@@ -82,11 +82,21 @@ def test_surfaces_are_self_contained():
         assert "fetch(" not in page and "XMLHttpRequest" not in page
 
 
-def test_solution_surface_kpis_match_the_report_and_scorer(tmp_path):
+def _plans(s: Scenario) -> dict:
+    first = {c.id: next(x.id for x in s.active_sailings() if x.lane == c.lane and c.ready_day <= x.cutoff_day)
+             for c in s.containers}
+    # every container of a lane on that lane's first sailing: far over the
+    # allocation, onto spot and unacknowledged space, with empty sailings left
+    crowded = {c.id: next(x.id for x in s.active_sailings() if x.lane == c.lane) for c in s.containers}
+    partial = dict(sorted(first.items())[::2])          # half the containers unplaced
+    return {"first eligible": first, "crowded": crowded, "partial": partial}
+
+
+@pytest.mark.parametrize("case", ["first eligible", "crowded", "partial"])
+def test_solution_surface_kpis_match_the_report(tmp_path, case):
     s = Scenario.load(ROOT / "data/scenario.json")
     problem = lower(s).problem
-    plan = {c.id: next(x.id for x in s.active_sailings() if x.lane == c.lane and c.ready_day <= x.cutoff_day)
-            for c in s.containers}
+    plan = _plans(s)[case]
     solution = {"solution": {"placements": [{"entity": e, "group": g} for e, g in plan.items()]}}
     out = _run_surface(tmp_path, "solution", {"manifest": MANIFEST, "problem": problem, "solution": solution})
     assert [m["type"] for m in out["posted"]] == ["ready", "resize"], out["posted"]
@@ -119,3 +129,42 @@ def test_solution_surface_refuses_a_result_without_placements(tmp_path):
     problem = json.loads((ROOT / "pack/datasets/two_lane_week.demo.json").read_text())
     out = _run_surface(tmp_path, "solution", {"manifest": MANIFEST, "problem": problem, "solution": {"status": "failed"}})
     assert {"type": "error", "message": "solution carries no placements"}.items() <= out["posted"][1].items()
+
+
+# -- the demo request the pack ships ------------------------------------------
+
+def test_demo_dataset_is_reproducible_from_its_builder():
+    from ocean_routing.demo import demo_request
+
+    committed = json.loads((ROOT / "pack/datasets/two_lane_week.demo.json").read_text())
+    assert committed == demo_request(), "run python scripts/build_demo_dataset.py"
+
+
+def test_demo_keeps_every_promise_only_by_buying_spot_space():
+    pytest.importorskip("ortools")
+    from ocean_routing.demo import demo_scenario
+    from ocean_routing.optimum import solve_optimum
+    from ocean_routing.scorer import score
+
+    s = demo_scenario()
+    plan, info = solve_optimum(lower(s).problem, time_limit_s=60)
+    sc = score(s, plan)
+    assert info["proven_optimal"] and sc.late_containers == 0 and sc.spot_feu > 0
+    for sailing in s.sailings:
+        sailing.spot_feu = 0.0
+    with pytest.raises(SystemExit):        # the allocation alone cannot carry the week
+        solve_optimum(lower(s).problem, time_limit_s=60)
+
+
+@pytest.mark.parametrize("break_it, message", [
+    (lambda p, sol: p["containers"][1].pop("feu"), "'feu' is not a number"),
+    (lambda p, sol: p["sailings"][0].pop("allocation_feu"), "'allocation_feu' is not a number"),
+    (lambda p, sol: sol["placements"].append({"entity": p["containers"][0]["id"], "group": "NO-SUCH-SAILING"}),
+     "placement names unknown sailings NO-SUCH-SAILING"),
+])
+def test_solution_surface_fails_closed_on_records_it_cannot_bind(tmp_path, break_it, message):
+    problem = json.loads((ROOT / "pack/datasets/two_lane_week.demo.json").read_text())
+    solution = {"placements": [{"entity": c["id"], "group": c["on_time_sailings"][0]} for c in problem["containers"][1:]]}
+    break_it(problem, solution)
+    out = _run_surface(tmp_path, "solution", {"manifest": MANIFEST, "problem": problem, "solution": solution})
+    assert out["posted"][1]["type"] == "error" and message in out["posted"][1]["message"], out["posted"]

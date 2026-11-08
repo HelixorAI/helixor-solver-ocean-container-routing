@@ -45,6 +45,14 @@ main.surface section{margin:0 0 12px}main.surface section:last-child{margin-bott
 const SCHEMA = "helixor.solver-surface.v1";
 
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+// Fail closed like report.py: a record missing a field a view binds is an
+// error, never a zero.
+function numOf(row, key, what) {
+  const v = row == null ? undefined : row[key];
+  if (typeof v !== "number" || !Number.isFinite(v)) throw new Error(`${what} ${row && row.id}: '${key}' is not a number`);
+  return v;
+}
+
 const fmtG = (v) => String(Math.round(v * 1000) / 1000);
 
 function num(v, fmt, unit) {
@@ -80,6 +88,11 @@ class Bound {
     this.groupById = new Map(this.groups.map((g) => [g.id, g]));
     this.plan = plan;
     this.members = new Map();
+    const entityIds = new Set(this.entities.map((e) => e.id));
+    for (const [e, g] of plan) {
+      if (!entityIds.has(e)) throw new Error(`placement names unknown ${decision.entities.name || "entity"} ${e}`);
+      if (!this.groupById.has(g)) throw new Error(`placement names unknown ${decision.groups.name || "group"} ${g}`);
+    }
     for (const e of this.entities) {
       if (!plan.has(e.id)) continue;
       const g = plan.get(e.id);
@@ -95,7 +108,7 @@ class Bound {
 
   collect(group, value) {
     if (value.collect !== "sum") throw new Error(`unsupported collect ${value.collect}`);
-    return (this.members.get(group.id) || []).reduce((s, e) => s + Number(e[value.entity_attribute] || 0), 0);
+    return (this.members.get(group.id) || []).reduce((s, e) => s + numOf(e, value.entity_attribute, "entity"), 0);
   }
 
   field(entity, path) {
@@ -123,7 +136,7 @@ function measure(b, ruleId, what) {
     const value = { collect: p.collect, entity_attribute: p.entity_attribute };
     const pairs = b.groups
       .filter((g) => b.members.get(g.id) || p.empty_groups === "judge")
-      .map((g) => [b.collect(g, value), Number(g[p.group_attribute])]);
+      .map((g) => [b.collect(g, value), numOf(g, p.group_attribute, "group")]);
     if (what === "fill_share" && p.compare === ">=") {
       const total = pairs.reduce((s, [, limit]) => s + limit, 0);
       return total ? pairs.reduce((s, [got, limit]) => s + Math.min(got, limit), 0) / total : 1;
@@ -135,7 +148,7 @@ function measure(b, ruleId, what) {
     }
   } else if (contract === "group_fits" && what === "excess") {
     return b.entities.filter((e) => b.plan.has(e.id))
-      .reduce((s, e) => s + Math.max(0, b.field(e, `group.${p.group_attribute}`) - e[p.entity_attribute]), 0);
+      .reduce((s, e) => s + Math.max(0, numOf(b.groupById.get(b.plan.get(e.id)), p.group_attribute, "group") - numOf(e, p.entity_attribute, "entity")), 0);
   }
   throw new Error(`measure ${what} is not defined for contract ${contract} (rule ${ruleId})`);
 }
@@ -168,12 +181,12 @@ function renderKpiProblem(b, viz, all) {
   const load = all.find((v) => v.type === "stacked_bar");
   const tiles = [[b.entities.length, "Containers"], [b.groups.length, "Sailings"]];
   if (load) {
-    const sum = (rows, key) => rows.reduce((s, r) => s + Number(r[key] || 0), 0);
+    const sum = (rows, key, what) => rows.reduce((s, r) => s + numOf(r, key, what), 0);
     tiles.push([new Set(b.groups.map((g) => g[load.group_by])).size, "Lanes"]);
-    tiles.push([sum(b.entities, load.value.entity_attribute), "FEU to book"]);
-    tiles.push([sum(b.groups, load.allocation), "Allocated FEU"]);
-    if (load.confirmed) tiles.push([sum(b.groups, load.confirmed), "Acknowledged FEU"]);
-    tiles.push([sum(b.groups, load.limit), "Space on sale, FEU"]);
+    tiles.push([sum(b.entities, load.value.entity_attribute, "entity"), "FEU to book"]);
+    tiles.push([sum(b.groups, load.allocation, "group"), "Allocated FEU"]);
+    if (load.confirmed) tiles.push([sum(b.groups, load.confirmed, "group"), "Acknowledged FEU"]);
+    tiles.push([sum(b.groups, load.limit, "group"), "Space on sale, FEU"]);
   }
   return `<div class='tiles'>${tiles.map(([v, l]) => `<div class='tile'><div class='label'>${esc(l)}</div><div class='value'>${esc(num(v))}</div></div>`).join("")}</div>`;
 }
@@ -184,7 +197,7 @@ function renderStackedBar(b, viz) {
     if (a !== c) return a < c ? -1 : 1;
     return Number(x[viz.sort_by || "id"]) - Number(y[viz.sort_by || "id"]) || String(x.id).localeCompare(String(y.id));
   });
-  const scale = Math.max(1, ...rows.map((g) => Number(g[viz.limit])), ...rows.map((g) => b.collect(g, viz.value)));
+  const scale = Math.max(1, ...rows.map((g) => numOf(g, viz.limit, "group")), ...rows.map((g) => b.collect(g, viz.value)));
   const barH = 16, gap = 6, labelW = 150, width = 560;
   const px = (v) => (v / scale) * (width - labelW - 60);
   let y = 0, lane = null;
@@ -196,8 +209,8 @@ function renderStackedBar(b, viz) {
       parts.push(`<text x='0' y='${y + 12}' class='grp'>${esc(lane)}</text>`);
       y += 20;
     }
-    const load = b.collect(g, viz.value), alloc = Number(g[viz.allocation]), limit = Number(g[viz.limit]);
-    const confirmed = viz.confirmed ? Number(g[viz.confirmed]) : limit;
+    const load = b.collect(g, viz.value), alloc = numOf(g, viz.allocation, "group"), limit = numOf(g, viz.limit, "group");
+    const confirmed = viz.confirmed ? numOf(g, viz.confirmed, "group") : limit;
     const used = Math.min(load, alloc);
     const extraOk = Math.max(0, Math.min(load, confirmed) - alloc);
     const extraUnack = Math.max(0, load - Math.max(alloc, confirmed));
@@ -248,8 +261,8 @@ function renderBar(b, viz, mode) {
   const used = new Map(), ref = new Map();
   for (const g of b.rows(viz.rows)) {
     const key = JSON.stringify([g[viz.x_axis], g[viz.group_by]]);
-    used.set(key, (used.get(key) || 0) + Math.min(b.collect(g, viz.value), Number(g[viz.value.cap])));
-    ref.set(key, (ref.get(key) || 0) + Number(g[viz.reference]));
+    used.set(key, (used.get(key) || 0) + Math.min(b.collect(g, viz.value), numOf(g, viz.value.cap, "group")));
+    ref.set(key, (ref.get(key) || 0) + numOf(g, viz.reference, "group"));
   }
   const keys = [...ref.keys()].filter((k) => ref.get(k) > 0).map((k) => JSON.parse(k));
   const sortVals = (vals) => [...new Set(vals)].sort((a, c) => (a < c ? -1 : a > c ? 1 : 0));

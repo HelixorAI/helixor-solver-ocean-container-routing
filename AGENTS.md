@@ -22,7 +22,7 @@ sailings with the **hosted Helixor Solver**, called over its REST API.
 | Path | Role |
 |---|---|
 | `pack/pack.yaml`, `pack/manifests/ocean_container_routing.yaml` | the model: decision, 8 rules with weights, pinning, search budget, UX surfaces, `ui.visualizations`; `pack.yaml` `surfaces` ships `pack/ui` |
-| `pack/datasets/two_lane_week.demo.json` | small demo dataset the pack ships; must carry every field the rules name |
+| `pack/datasets/two_lane_week.demo.json` | demo request the pack ships (`ocean_routing/demo.py`, `scripts/build_demo_dataset.py`): one peak week, every promise keepable only with spot space; must carry every field the rules name |
 | `ocean_routing/model.py` | `Container`, `Sailing`, `Scenario`, plan file IO |
 | `ocean_routing/lowering.py` | records to request: `on_time_sailings`, `capacity_feu`, `confirmed_feu`, `committed_feu`, prior plan, pins |
 | `ocean_routing/client.py` | REST client: publish pack, read manifest, solve |

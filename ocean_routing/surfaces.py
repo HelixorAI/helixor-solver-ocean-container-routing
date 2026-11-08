@@ -35,8 +35,8 @@ def render(role: str) -> str:
         raise ValueError(f"unknown surface role {role!r}")
     css = (SRC / "surface.css").read_text() + SURFACE_CSS
     js = f"const ROLE = {json.dumps(role)};\n" + (SRC / "surface.js").read_text()
-    if "</script" in js.lower():
-        raise ValueError("surface script must not contain a closing script tag")
+    if "</script" in js.lower() or "</style" in css.lower():
+        raise ValueError("surface script and style must not contain their own closing tag")
     return (f"<!doctype html><html lang='en'><head><meta charset='utf-8'>"
             f"<meta http-equiv='Content-Security-Policy' content=\"{CSP}\">"
             f"<meta name='viewport' content='width=device-width,initial-scale=1'>"

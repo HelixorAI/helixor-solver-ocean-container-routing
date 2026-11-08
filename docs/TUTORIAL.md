@@ -284,6 +284,16 @@ pack/
   ui/ocean.solution.html                 Solver UX view of a plan
 ```
 
+The demo request is one peak week on the two Los Angeles lanes: 41
+containers ready in week 1 against the sailings of weeks 1 to 3. Each
+promise date was quoted from a sailing the container can catch, and the
+week's cargo exceeds the allocation on the early sailings. Every container
+can arrive on time, but only by buying space beyond the allocation: the
+proven optimum books 5 FEU of spot and delivers all 41 on time, while the
+allocation alone cannot carry the week at all.
+`python scripts/build_demo_dataset.py` rebuilds it from the generator
+(`ocean_routing/demo.py`).
+
 The two `ui/` pages are the pack's `surfaces` (roles `problem` and
 `solution`). Each is one self-contained HTML page built from `ui/src` by
 `python scripts/build_surfaces.py`, with no network access. The Solver UX

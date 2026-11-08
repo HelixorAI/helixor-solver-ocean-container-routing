@@ -397,7 +397,7 @@ network access and never sees your token.
 ## Results
 
 Measured on 2026-11-06 on macOS (Apple silicon), CPU only, with pack 2.2.
-(2.3 differs only in the demo dataset, 2.4 only in its Solver UX surfaces.)
+(2.3 differs only in the demo dataset; 2.4 adds the Solver UX surfaces and a new demo request.)
 
 - Hosted path: the Helixor Solver server run locally, behind the same REST API
   as the hosted service. Requests send `"solver": {"mode": "local"}`, which
@@ -556,6 +556,7 @@ ocean_routing/
 data/scenario.json         generated scenario (seed 7)
 data/events/replay.json    five event cycles for continuous planning, including a peak surge
 scripts/build_pack.py      builds the pack zip (publish-pack does this for you)
+scripts/build_demo_dataset.py  rebuilds pack/datasets/two_lane_week.demo.json (ocean_routing/demo.py)
 scripts/build_surfaces.py  rebuilds pack/ui/*.html from ui/src (the pack build refuses stale ones)
 ui/src/                    surface.js and surface.css: the Solver UX surfaces' source
 scripts/summary_table.py   prints the continuous-planning tables from out/continuous/summary.json
