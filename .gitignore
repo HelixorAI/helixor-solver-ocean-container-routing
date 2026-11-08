@@ -6,3 +6,6 @@ __pycache__/
 dist/
 out/
 .DS_Store
+
+# Helixor license files (section 14 of the guide loads one from the repo root)
+*.hxlic

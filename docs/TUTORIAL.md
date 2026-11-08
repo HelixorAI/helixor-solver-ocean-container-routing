@@ -743,4 +743,4 @@ To plan your own containers:
 | hosted repairs 4–10% above the optimum, with many moves | a known solver issue with large repairs (section 10) | compare with `--compare`; the MIP plans show what is reachable |
 | no license yet, but want to see the loop | | `continuous --start out/plan-optimum.json --offline` runs the replay with the exact MIP, labelled as a dry run |
 | `pytest -q` fails against your solver after loading `.env` | it shouldn't: live tests run only with `SOLVER_LIVE=1` | run `SOLVER_LIVE=1 pytest -q tests/test_live_solver.py` only when you mean to publish and solve |
-| `422 solver_pack_rejected`, immutable version conflict | a changed pack published under a version that already exists | bump `version` in `pack/pack.yaml` and the manifest |
+| `409 solver_pack_version_conflict` (earlier releases: `422 solver_pack_rejected`) | a changed pack published under a version that already exists | bump `version` in `pack/pack.yaml` and the manifest |

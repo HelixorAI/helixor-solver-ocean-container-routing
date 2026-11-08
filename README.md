@@ -208,7 +208,7 @@ This command builds `dist/ocean_container_routing-2.4.zip`, validates it,
 uploads it and activates it. It then reads the manifest back.
 
 Pack versions are immutable. Publishing the same version again with different
-content is refused with `422 solver_pack_rejected`. If you change the pack,
+content is refused: `409 solver_pack_version_conflict` from the current server, `422 solver_pack_rejected` from earlier releases. If you change the pack,
 bump `version` in both `pack/pack.yaml` and the manifest.
 
 ```bash
