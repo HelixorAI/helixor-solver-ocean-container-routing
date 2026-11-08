@@ -1,0 +1,426 @@
+<!doctype html><html lang='en'><head><meta charset='utf-8'><meta http-equiv='Content-Security-Policy' content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:"><meta name='viewport' content='width=device-width,initial-scale=1'><title>Ocean Routing Solution</title><style>:root{--surface:#fcfcfb;--panel:#ffffff;--border:#e4e3df;--text:#0b0b0b;--text2:#52514e;--muted:#7a7974;
+--c1:#2a78d6;--c2:#eb6834;--c3:#1baf7a;--c4:#eda100;--critical:#c62828;--grid:#e4e3df;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--surface:#1a1a19;--panel:#222221;--border:#3a3a38;
+--text:#f0efec;--text2:#c3c2b7;--muted:#9a998f;--c1:#3987e5;--c2:#d95926;--c3:#199e70;--c4:#c98500;--critical:#ef6461;--grid:#3a3a38;color-scheme:dark}}
+:root[data-theme="dark"]{--surface:#1a1a19;--panel:#222221;--border:#3a3a38;--text:#f0efec;--text2:#c3c2b7;--muted:#9a998f;
+--c1:#3987e5;--c2:#d95926;--c3:#199e70;--c4:#c98500;--critical:#ef6461;--grid:#3a3a38;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--surface);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:980px;margin:0 auto;padding:24px 16px 64px}h1{font-size:26px;margin:0 0 4px}h2{font-size:19px;margin:0 0 4px}h3{font-size:15px;margin:14px 0 4px;color:var(--text2)}
+.sub,.hint{color:var(--text2);font-size:13px;margin:0 0 10px}section{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;margin:16px 0}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.tile{border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.tile .label{color:var(--text2);font-size:13px}.tile .value{font-size:24px;font-weight:600}.tile.critical .value{color:var(--critical)}
+.icon{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--critical);color:#fff;font-size:13px;margin-right:6px;vertical-align:3px}
+svg{width:100%;height:auto;display:block;overflow:visible}text{font-size:11px;fill:var(--text2)}text.grp{font-weight:600;fill:var(--text)}text.val{fill:var(--muted)}
+.s-used,.c1{fill:var(--c1)}.s-spot,.c2{fill:var(--c2)}.c3{fill:var(--c3)}.c4{fill:var(--c4)}.s-unused{fill:none;stroke:var(--muted);stroke-dasharray:3 2}
+.s-empty{fill:none;stroke:var(--muted)}.s-unack{fill:url(#hatch);stroke:var(--c2);stroke-width:1}.s-held{fill:none;stroke:var(--c2);stroke-dasharray:3 2}.limit{stroke:var(--text);stroke-width:2}.grid{stroke:var(--grid)}.hitbox{fill:transparent}.hit:hover rect:not(.hitbox){opacity:.8}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--text2);margin:6px 0 8px}.legend i.k{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+i.k.s-used,i.k.c1{background:var(--c1)}i.k.s-spot,i.k.c2{background:var(--c2)}i.k.c3{background:var(--c3)}i.k.c4{background:var(--c4)}
+i.k.s-unused,i.k.s-empty{border:1px dashed var(--muted)}i.k.s-held{border:1px dashed var(--c2)}
+i.k.s-unack{background:repeating-linear-gradient(45deg,var(--c2) 0 2px,transparent 2px 5px);border:1px solid var(--c2)}i.k.limit-k{width:3px;background:var(--text)}
+.scroll{overflow:auto;max-height:420px}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);white-space:nowrap}
+th{color:var(--text2);font-weight:600}details.tv{margin-top:8px}summary{cursor:pointer;color:var(--text2);font-size:13px}
+#tip{position:fixed;pointer-events:none;background:var(--text);color:var(--surface);padding:5px 8px;border-radius:6px;font-size:12px;display:none;max-width:320px;z-index:9}
+
+html{overflow-y:hidden}body{background:transparent}main.surface{max-width:none;margin:0;padding:0}
+main.surface section{margin:0 0 12px}main.surface section:last-child{margin-bottom:0}
+.err{color:var(--critical);margin:0;padding:12px}
+</style></head><body><main class='surface' id='app' aria-live='polite'></main><div id='tip' role='tooltip'></div><script>const ROLE = "solution";
+// Ocean container routing surfaces for the Solver UX.
+//
+// The same declarations `python -m ocean_routing report` renders: every view
+// is driven by the manifest's `ui.visualizations`, bound to the request's
+// records (entities, groups) and the plan's placements, and a KPI names a rule
+// and is evaluated from that rule's own contract and parameters.
+//
+// Host protocol (helixor.solver-surface.v1). The page runs in a sandboxed
+// iframe with an opaque origin and no network; it never sees a token.
+//   surface -> host  {schema, type: "ready", role}
+//   host -> surface  {schema, type: "render", role, problem_type, manifest, problem, solution, theme}
+//   surface -> host  {schema, type: "resize", height}
+//   surface -> host  {schema, type: "error", message}
+// `solution` is the solve result as the server returned it; placements are
+// read from `solution.placements` or `solution.solution.placements`.
+// ROLE is set by scripts/build_surfaces.py: "problem" or "solution".
+
+const SCHEMA = "helixor.solver-surface.v1";
+
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmtG = (v) => String(Math.round(v * 1000) / 1000);
+
+function num(v, fmt, unit) {
+  if (fmt === "percent") return `${(v * 100).toFixed(1)}%`;
+  const text = Math.abs(v - Math.round(v)) < 1e-9 ? Math.round(v).toLocaleString("en-US")
+    : v.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  return unit ? `${text} ${unit}` : text;
+}
+
+function tableView(headers, rows, caption = "Table view") {
+  const head = headers.map((h) => `<th>${esc(h)}</th>`).join("");
+  const body = rows.map((r) => `<tr>${r.map((c) => `<td>${esc(c)}</td>`).join("")}</tr>`).join("");
+  return `<details class='tv'><summary>${esc(caption)}</summary><div class='scroll'><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div></details>`;
+}
+
+// -- binding the request to the manifest's names -------------------------------
+
+class Bound {
+  constructor(manifest, problem, plan) {
+    const decision = manifest.decision || {};
+    for (const side of ["entities", "groups"]) {
+      const identity = (decision[side] || {}).identity || "id";
+      if (identity !== "id") throw new Error(`surface supports identity 'id' only, ${side} declare ${identity}`);
+    }
+    const source = (side) => {
+      const name = (decision[side] || {}).source;
+      if (!name || !Array.isArray(problem[name])) throw new Error(`problem has no '${name}' records for decision ${side}`);
+      return problem[name];
+    };
+    this.manifest = manifest;
+    this.entities = source("entities");
+    this.groups = source("groups");
+    this.groupById = new Map(this.groups.map((g) => [g.id, g]));
+    this.plan = plan;
+    this.members = new Map();
+    for (const e of this.entities) {
+      if (!plan.has(e.id)) continue;
+      const g = plan.get(e.id);
+      if (!this.members.has(g)) this.members.set(g, []);
+      this.members.get(g).push(e);
+    }
+  }
+
+  rows(name) {
+    if (name !== "entities" && name !== "groups") throw new Error(`visualization rows must be 'entities' or 'groups', got ${name}`);
+    return name === "entities" ? this.entities : this.groups;
+  }
+
+  collect(group, value) {
+    if (value.collect !== "sum") throw new Error(`unsupported collect ${value.collect}`);
+    return (this.members.get(group.id) || []).reduce((s, e) => s + Number(e[value.entity_attribute] || 0), 0);
+  }
+
+  field(entity, path) {
+    if (path.startsWith("group.")) {
+      const group = this.groupById.get(this.plan.get(entity.id));
+      return group === undefined ? null : group[path.slice(6)];
+    }
+    return entity[path];
+  }
+}
+
+// -- rule measures: evaluated from the rule's contract, not its name -----------
+
+function measure(b, ruleId, what) {
+  const rule = (b.manifest.constraints || {})[ruleId];
+  if (!rule) throw new Error(`visualization names unknown rule ${ruleId}`);
+  const contract = rule.contract;
+  const p = rule.parameters || {};
+  if (contract === "assigned_in_entity_set") {
+    const ok = b.entities.map((e) => (e[p.entity_attribute] || []).includes(b.field(e, `group.${p.group_attribute}`)));
+    const sat = ok.filter(Boolean).length;
+    if (what === "satisfied_share") return ok.length ? sat / ok.length : 1;
+    if (what === "violated_count") return ok.length - sat;
+  } else if (contract === "aggregate") {
+    const value = { collect: p.collect, entity_attribute: p.entity_attribute };
+    const pairs = b.groups
+      .filter((g) => b.members.get(g.id) || p.empty_groups === "judge")
+      .map((g) => [b.collect(g, value), Number(g[p.group_attribute])]);
+    if (what === "fill_share" && p.compare === ">=") {
+      const total = pairs.reduce((s, [, limit]) => s + limit, 0);
+      return total ? pairs.reduce((s, [got, limit]) => s + Math.min(got, limit), 0) / total : 1;
+    }
+    if (what === "excess") {
+      return p.compare === "<="
+        ? pairs.reduce((s, [got, limit]) => s + Math.max(0, got - limit), 0)
+        : pairs.reduce((s, [got, limit]) => s + Math.max(0, limit - got), 0);
+    }
+  } else if (contract === "group_fits" && what === "excess") {
+    return b.entities.filter((e) => b.plan.has(e.id))
+      .reduce((s, e) => s + Math.max(0, b.field(e, `group.${p.group_attribute}`) - e[p.entity_attribute]), 0);
+  }
+  throw new Error(`measure ${what} is not defined for contract ${contract} (rule ${ruleId})`);
+}
+
+function violates(b, ruleId, entity) {
+  const rule = b.manifest.constraints[ruleId];
+  const p = rule.parameters || {};
+  if (rule.contract !== "assigned_in_entity_set") throw new Error(`row filter by rule needs a per-entity contract, ${ruleId} is ${rule.contract}`);
+  return !(entity[p.entity_attribute] || []).includes(b.field(entity, `group.${p.group_attribute}`));
+}
+
+// -- renderers: solution (placements bound) and problem (records only) -------
+
+function renderKpi(b, viz) {
+  const tiles = viz.metrics.map((m) => {
+    const v = measure(b, m.rule, m.measure);
+    const status = v > 0 ? m.status : null;
+    const icon = status ? "<span class='icon' aria-hidden='true'>!</span>" : "";
+    return `<div class='tile ${status || ""}'><div class='label'>${esc(m.label)}</div>`
+      + `<div class='value'>${icon}${esc(num(v, m.format, m.unit))}</div>`
+      + `<div class='hint'>rule: ${esc(b.manifest.constraints[m.rule].name)}</div></div>`;
+  });
+  return `<div class='tiles'>${tiles.join("")}</div>`;
+}
+
+// Before a solve there is no plan to judge: the problem view summarises what
+// the declared views bind to (the rows, the value they collect and the
+// reference columns each sailing carries).
+function renderKpiProblem(b, viz, all) {
+  const load = all.find((v) => v.type === "stacked_bar");
+  const tiles = [[b.entities.length, "Containers"], [b.groups.length, "Sailings"]];
+  if (load) {
+    const sum = (rows, key) => rows.reduce((s, r) => s + Number(r[key] || 0), 0);
+    tiles.push([new Set(b.groups.map((g) => g[load.group_by])).size, "Lanes"]);
+    tiles.push([sum(b.entities, load.value.entity_attribute), "FEU to book"]);
+    tiles.push([sum(b.groups, load.allocation), "Allocated FEU"]);
+    if (load.confirmed) tiles.push([sum(b.groups, load.confirmed), "Acknowledged FEU"]);
+    tiles.push([sum(b.groups, load.limit), "Space on sale, FEU"]);
+  }
+  return `<div class='tiles'>${tiles.map(([v, l]) => `<div class='tile'><div class='label'>${esc(l)}</div><div class='value'>${esc(num(v))}</div></div>`).join("")}</div>`;
+}
+
+function renderStackedBar(b, viz) {
+  const rows = [...b.rows(viz.rows)].sort((x, y) => {
+    const a = x[viz.group_by], c = y[viz.group_by];
+    if (a !== c) return a < c ? -1 : 1;
+    return Number(x[viz.sort_by || "id"]) - Number(y[viz.sort_by || "id"]) || String(x.id).localeCompare(String(y.id));
+  });
+  const scale = Math.max(1, ...rows.map((g) => Number(g[viz.limit])), ...rows.map((g) => b.collect(g, viz.value)));
+  const barH = 16, gap = 6, labelW = 150, width = 560;
+  const px = (v) => (v / scale) * (width - labelW - 60);
+  let y = 0, lane = null;
+  const parts = [], tableRows = [];
+  for (const g of rows) {
+    if (g[viz.group_by] !== lane) {
+      lane = g[viz.group_by];
+      y += 8;
+      parts.push(`<text x='0' y='${y + 12}' class='grp'>${esc(lane)}</text>`);
+      y += 20;
+    }
+    const load = b.collect(g, viz.value), alloc = Number(g[viz.allocation]), limit = Number(g[viz.limit]);
+    const confirmed = viz.confirmed ? Number(g[viz.confirmed]) : limit;
+    const used = Math.min(load, alloc);
+    const extraOk = Math.max(0, Math.min(load, confirmed) - alloc);
+    const extraUnack = Math.max(0, load - Math.max(alloc, confirmed));
+    const unused = Math.max(0, alloc - load);
+    const held = Math.max(0, confirmed - Math.max(load, alloc));
+    const label = g[viz.row_label];
+    const tip = `${label}: ${fmtG(load)} FEU booked, allocation ${fmtG(alloc)}, acknowledged ${fmtG(confirmed)}, space on sale ${fmtG(limit)}`
+      + (extraUnack ? `, ${fmtG(extraUnack)} FEU not yet acknowledged` : "") + (held ? `, ${fmtG(held)} FEU held for later` : "");
+    const x0 = labelW;
+    let cursor = x0;
+    const segs = [];
+    for (const [amount, cls, solid] of [[used, "s-used", true], [extraOk, "s-spot", true], [extraUnack, "s-unack", true],
+      [unused, "s-unused", false], [held, "s-held", false]]) {
+      if (amount <= 0) continue;
+      const w = Math.max(px(amount) - (solid ? 2 : 1), 1);
+      const [y0, h] = solid ? [y, barH] : [y + 0.5, barH - 1];
+      segs.push(`<rect x='${cursor.toFixed(1)}' y='${y0}' width='${w.toFixed(1)}' height='${h}' rx='3' class='${cls}'/>`);
+      cursor += px(amount);
+    }
+    segs.push(`<line x1='${(x0 + px(limit)).toFixed(1)}' x2='${(x0 + px(limit)).toFixed(1)}' y1='${y - 2}' y2='${y + barH + 2}' class='limit'/>`);
+    const value = b.plan.size ? `${fmtG(load)}/${fmtG(alloc)}` : `${fmtG(alloc)} of ${fmtG(limit)}`;
+    parts.push(`<g class='hit' data-tip='${esc(tip)}'><rect x='0' y='${y - gap / 2}' width='${width}' height='${barH + gap}' class='hitbox'/>`
+      + `<text x='${labelW - 8}' y='${y + 12}' class='lbl' text-anchor='end'>${esc(label)}</text>${segs.join("")}`
+      + `<text x='${(x0 + px(Math.max(load, alloc, limit)) + 6).toFixed(1)}' y='${y + 12}' class='val'>${value}</text></g>`);
+    tableRows.push([label, lane, load, alloc, confirmed, limit, extraOk + extraUnack, extraUnack, unused, held]);
+    y += barH + gap;
+  }
+  const legend = !b.plan.size
+    ? "<div class='legend'><span><i class='k s-unused'></i>Allocation</span>"
+      + "<span><i class='k s-held'></i>Acknowledged beyond the allocation</span>"
+      + "<span><i class='k limit-k'></i>Space on sale</span></div>"
+    : "<div class='legend'><span><i class='k s-used'></i>Allocation used</span>"
+    + "<span><i class='k s-spot'></i>Beyond allocation, acknowledged</span>"
+    + "<span><i class='k s-unack'></i>Beyond allocation, not yet acknowledged</span>"
+    + "<span><i class='k s-unused'></i>Allocation left unused</span>"
+    + "<span><i class='k s-held'></i>Acknowledged space held for later</span>"
+    + "<span><i class='k limit-k'></i>Space on sale</span></div>";
+  const hatch = "<defs><pattern id='hatch' width='5' height='5' patternUnits='userSpaceOnUse' patternTransform='rotate(45)'>"
+    + "<rect width='2' height='5' class='s-spot'/></pattern></defs>";
+  const svg = `<svg viewBox='0 0 ${width} ${y + 4}' role='img' aria-label='${esc(viz.name)}'>${hatch}${parts.join("")}</svg>`;
+  return legend + svg + tableView(["Sailing", "Lane", "Booked FEU", "Allocation", "Acknowledged", "Space on sale",
+    "Beyond allocation", "Not acknowledged", "Unused allocation", "Held idle"], tableRows);
+}
+
+// `percent` (solution): share of the reference used. `absolute` (problem): the
+// reference itself, so the view shows where the allocation sits before a solve.
+function renderBar(b, viz, mode) {
+  const used = new Map(), ref = new Map();
+  for (const g of b.rows(viz.rows)) {
+    const key = JSON.stringify([g[viz.x_axis], g[viz.group_by]]);
+    used.set(key, (used.get(key) || 0) + Math.min(b.collect(g, viz.value), Number(g[viz.value.cap])));
+    ref.set(key, (ref.get(key) || 0) + Number(g[viz.reference]));
+  }
+  const keys = [...ref.keys()].filter((k) => ref.get(k) > 0).map((k) => JSON.parse(k));
+  const sortVals = (vals) => [...new Set(vals)].sort((a, c) => (a < c ? -1 : a > c ? 1 : 0));
+  const xs = sortVals(keys.map((k) => k[0]));
+  const series = sortVals(keys.map((k) => k[1]));
+  const width = 560, height = 200, left = 36, bottom = 28;
+  const plotH = height - bottom - 10;
+  const top = mode === "absolute" ? Math.max(1, ...[...ref.values()]) : 1;
+  const slot = (width - left) / Math.max(xs.length, 1);
+  const bw = Math.min(18, (slot - 12) / Math.max(series.length, 1));
+  const parts = [0, 0.5, 1].map((t) => {
+    const gy = height - bottom - plotH * t;
+    const tick = mode === "absolute" ? fmtG(top * t) : `${Math.round(t * 100)}%`;
+    return `<line x1='${left}' x2='${width}' y1='${gy}' y2='${gy}' class='grid'/><text x='${left - 6}' y='${gy + 4}' class='axis' text-anchor='end'>${tick}</text>`;
+  });
+  const rows = [];
+  xs.forEach((x, i) => {
+    const x0 = left + i * slot + (slot - bw * series.length) / 2;
+    series.forEach((s, j) => {
+      const key = JSON.stringify([x, s]);
+      if (!ref.get(key)) return;
+      const r = ref.get(key), u = used.get(key);
+      const share = u / r;
+      const h = plotH * (mode === "absolute" ? r / top : share);
+      const tip = mode === "absolute" ? `${viz.x_axis} ${x}, ${s}: ${fmtG(r)} FEU allocated`
+        : `${viz.x_axis} ${x}, ${s}: ${fmtG(u)} of ${fmtG(r)} FEU allocated used (${Math.round(share * 100)}%)`;
+      parts.push(`<g class='hit' data-tip='${esc(tip)}'><rect x='${(x0 + j * bw).toFixed(1)}' y='${(height - bottom - h).toFixed(1)}' `
+        + `width='${(bw - 2).toFixed(1)}' height='${Math.max(h, 1).toFixed(1)}' rx='3' class='c${(j % 4) + 1}'/></g>`);
+      rows.push(mode === "absolute" ? [x, s, r] : [x, s, u, r, `${(share * 100).toFixed(1)}%`]);
+    });
+    parts.push(`<text x='${(left + i * slot + slot / 2).toFixed(1)}' y='${height - 8}' class='axis' text-anchor='middle'>${esc(viz.x_axis)} ${esc(x)}</text>`);
+  });
+  const legend = `<div class='legend'>${series.map((s, j) => `<span><i class='k c${(j % 4) + 1}'></i>${esc(s)}</span>`).join("")}</div>`;
+  const svg = `<svg viewBox='0 0 ${width} ${height}' role='img' aria-label='${esc(viz.name)}'>${parts.join("")}</svg>`;
+  const by = viz.group_by.charAt(0).toUpperCase() + viz.group_by.slice(1);
+  const x = viz.x_axis.charAt(0).toUpperCase() + viz.x_axis.slice(1);
+  return legend + svg + (mode === "absolute" ? tableView([x, by, "Allocated"], rows)
+    : tableView([x, by, "Allocation used", "Allocated", "Share"], rows));
+}
+
+function renderGantt(b, viz) {
+  const rows = b.rows(viz.rows);
+  const lanes = [...new Set(rows.map((g) => g[viz.lanes]))].sort();
+  const lo = Math.min(...rows.map((g) => g[viz.start]));
+  const hi = Math.max(...rows.map((g) => g[viz.end]));
+  const width = 560, left = 110, laneH = 46;
+  const px = (d) => left + ((d - lo) / Math.max(hi - lo, 1)) * (width - left - 10);
+  const parts = [], tableRows = [];
+  const step = hi - lo <= 42 ? 7 : 14;
+  for (let d = lo - (((lo % step) + step) % step) + step; d <= hi; d += step) {
+    parts.push(`<line x1='${px(d).toFixed(1)}' x2='${px(d).toFixed(1)}' y1='0' y2='${lanes.length * laneH}' class='grid'/>`
+      + `<text x='${px(d).toFixed(1)}' y='${lanes.length * laneH + 14}' class='axis' text-anchor='middle'>day ${d}</text>`);
+  }
+  lanes.forEach((lane, i) => {
+    const onLane = rows.filter((g) => g[viz.lanes] === lane).sort((x, y) => x[viz.start] - y[viz.start]);
+    parts.push(`<text x='0' y='${i * laneH + 26}' class='lbl'>${esc(lane)}</text>`);
+    const tracks = [];
+    for (const g of onLane) {
+      let t = tracks.findIndex((end) => end < g[viz.start]);
+      if (t < 0) { t = tracks.length; tracks.push(0); }
+      tracks[t] = g[viz.end];
+      const y = i * laneH + 6 + (t % 4) * 9;
+      const load = b.collect(g, viz.value);
+      const cls = load ? "s-used" : "s-empty";
+      const tip = `${g[viz.label]}: departs day ${g[viz.start]}, arrives day ${g[viz.end]}, ${fmtG(load)} FEU booked`;
+      parts.push(`<g class='hit' data-tip='${esc(tip)}'><rect x='${px(g[viz.start]).toFixed(1)}' y='${y}' `
+        + `width='${Math.max(px(g[viz.end]) - px(g[viz.start]) - 2, 2).toFixed(1)}' height='7' rx='3' class='${cls}'/></g>`);
+      tableRows.push([g[viz.label], lane, g[viz.start], g[viz.end], load]);
+    }
+  });
+  const legend = b.plan.size
+    ? "<div class='legend'><span><i class='k s-used'></i>Sailing with bookings</span><span><i class='k s-empty'></i>No bookings</span></div>"
+    : "<div class='legend'><span><i class='k s-empty'></i>Sailing, nothing booked yet</span></div>";
+  const svg = `<svg viewBox='0 0 ${width} ${lanes.length * laneH + 20}' role='img' aria-label='${esc(viz.name)}'>${parts.join("")}</svg>`;
+  return legend + svg + tableView(["Sailing", "Lane", "Departs", "Arrives", "Booked FEU"], tableRows);
+}
+
+function renderTable(b, viz) {
+  let rows = b.rows(viz.rows);
+  if (viz.filter) rows = rows.filter((r) => violates(b, viz.filter.rule, r) === (viz.filter.violated ?? true));
+  const cols = viz.columns;
+  const head = cols.map((c) => `<th>${esc(c)}</th>`).join("");
+  const trs = rows.map((r) => `<tr>${cols.map((c) => `<td>${esc(b.field(r, c))}</td>`).join("")}</tr>`).join("");
+  return `<p class='hint'>${rows.length} rows</p><div class='scroll'><table><thead><tr>${head}</tr></thead><tbody>${trs}</tbody></table></div>`;
+}
+
+// Which declared views each role renders, and how. A view that judges the
+// plan (rule KPIs, rule-filtered rows) has a problem form only where one is
+// meaningful without placements.
+const RENDERERS = {
+  solution: {
+    kpi: renderKpi, stacked_bar: renderStackedBar, bar: (b, v) => renderBar(b, v, "percent"),
+    gantt: renderGantt, table: renderTable,
+  },
+  problem: {
+    kpi: renderKpiProblem, stacked_bar: renderStackedBar, bar: (b, v) => renderBar(b, v, "absolute"),
+    gantt: renderGantt,
+  },
+};
+
+const PROBLEM_TITLES = { kpi: "Data at a glance", stacked_bar: "Space by sailing", bar: "Allocation by week and carrier" };
+
+function placementsOf(solution) {
+  const s = solution && typeof solution === "object" ? solution : {};
+  const list = Array.isArray(s.placements) ? s.placements
+    : (s.solution && Array.isArray(s.solution.placements) ? s.solution.placements : null);
+  if (!list) throw new Error("solution carries no placements");
+  return new Map(list.map((p) => [p.entity, p.group]));
+}
+
+function render(msg) {
+  const manifest = msg.manifest || {};
+  const views = ((manifest.ui || {}).visualizations) || [];
+  if (!views.length) throw new Error("manifest declares no ui.visualizations");
+  const problem = msg.problem || {};
+  const plan = ROLE === "solution" ? placementsOf(msg.solution) : new Map();
+  const b = new Bound(manifest, problem, plan);
+  const table = RENDERERS[ROLE];
+  const sections = [];
+  for (const viz of views) {
+    const fn = table[viz.type];
+    if (!fn) {
+      if (ROLE === "solution") throw new Error(`visualization ${viz.id}: no renderer for type ${viz.type}`);
+      continue;
+    }
+    const title = ROLE === "problem" && PROBLEM_TITLES[viz.type] ? PROBLEM_TITLES[viz.type] : viz.name;
+    const desc = ROLE === "solution" && viz.description ? `<p class='sub'>${esc(viz.description)}</p>` : "";
+    sections.push(`<section data-viz='${esc(viz.id)}'><h2>${esc(title)}</h2>${desc}${fn(b, viz, views)}</section>`);
+  }
+  document.getElementById("app").innerHTML = sections.join("");
+}
+
+// -- host protocol --------------------------------------------------------------
+
+const post = (body) => parent.postMessage({ schema: SCHEMA, ...body }, "*");
+let lastHeight = 0;
+// Content height, not the viewport's: the host sizes the frame to it.
+function reportHeight() {
+  const h = Math.ceil(document.getElementById("app").getBoundingClientRect().bottom + window.scrollY) + 4;
+  if (h !== lastHeight) { lastHeight = h; post({ type: "resize", height: h }); }
+}
+
+function showError(message) {
+  document.getElementById("app").innerHTML = `<p class='err'>${esc(message)}</p>`;
+  post({ type: "error", message });
+}
+
+window.addEventListener("message", (event) => {
+  if (event.source !== parent) return;
+  const msg = event.data;
+  if (!msg || msg.schema !== SCHEMA || msg.type !== "render") return;
+  if (msg.role && msg.role !== ROLE) return showError(`this surface renders the ${ROLE} role, host sent ${msg.role}`);
+  if (msg.theme === "dark" || msg.theme === "light") document.documentElement.dataset.theme = msg.theme;
+  try {
+    render(msg);
+  } catch (err) {
+    showError(err && err.message ? err.message : String(err));
+  }
+  reportHeight();
+});
+
+const tip = document.getElementById("tip");
+document.addEventListener("mousemove", (e) => {
+  const g = e.target.closest && e.target.closest(".hit");
+  if (!g) { tip.style.display = "none"; return; }
+  tip.textContent = g.dataset.tip;
+  tip.style.display = "block";
+  tip.style.left = `${Math.min(e.clientX + 12, innerWidth - 330)}px`;
+  tip.style.top = `${e.clientY + 12}px`;
+});
+document.addEventListener("mouseleave", () => { tip.style.display = "none"; });
+new ResizeObserver(reportHeight).observe(document.getElementById("app"));
+post({ type: "ready", role: ROLE });
+</script></body></html>

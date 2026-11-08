@@ -334,30 +334,8 @@ def _pinning_section(rows: List[Dict[str, Any]]) -> str:
     return f"<div class='scroll'><table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>"
 
 
-CSS = """
-:root{--surface:#fcfcfb;--panel:#ffffff;--border:#e4e3df;--text:#0b0b0b;--text2:#52514e;--muted:#7a7974;
---c1:#2a78d6;--c2:#eb6834;--c3:#1baf7a;--c4:#eda100;--critical:#c62828;--grid:#e4e3df;color-scheme:light}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--surface:#1a1a19;--panel:#222221;--border:#3a3a38;
---text:#f0efec;--text2:#c3c2b7;--muted:#9a998f;--c1:#3987e5;--c2:#d95926;--c3:#199e70;--c4:#c98500;--critical:#ef6461;--grid:#3a3a38;color-scheme:dark}}
-:root[data-theme="dark"]{--surface:#1a1a19;--panel:#222221;--border:#3a3a38;--text:#f0efec;--text2:#c3c2b7;--muted:#9a998f;
---c1:#3987e5;--c2:#d95926;--c3:#199e70;--c4:#c98500;--critical:#ef6461;--grid:#3a3a38;color-scheme:dark}
-*{box-sizing:border-box}body{margin:0;background:var(--surface);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
-main{max-width:980px;margin:0 auto;padding:24px 16px 64px}h1{font-size:26px;margin:0 0 4px}h2{font-size:19px;margin:0 0 4px}h3{font-size:15px;margin:14px 0 4px;color:var(--text2)}
-.sub,.hint{color:var(--text2);font-size:13px;margin:0 0 10px}section{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;margin:16px 0}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.tile{border:1px solid var(--border);border-radius:8px;padding:10px 12px}
-.tile .label{color:var(--text2);font-size:13px}.tile .value{font-size:24px;font-weight:600}.tile.critical .value{color:var(--critical)}
-.icon{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--critical);color:#fff;font-size:13px;margin-right:6px;vertical-align:3px}
-svg{width:100%;height:auto;display:block;overflow:visible}text{font-size:11px;fill:var(--text2)}text.grp{font-weight:600;fill:var(--text)}text.val{fill:var(--muted)}
-.s-used,.c1{fill:var(--c1)}.s-spot,.c2{fill:var(--c2)}.c3{fill:var(--c3)}.c4{fill:var(--c4)}.s-unused{fill:none;stroke:var(--muted);stroke-dasharray:3 2}
-.s-empty{fill:none;stroke:var(--muted)}.s-unack{fill:url(#hatch);stroke:var(--c2);stroke-width:1}.s-held{fill:none;stroke:var(--c2);stroke-dasharray:3 2}.limit{stroke:var(--text);stroke-width:2}.grid{stroke:var(--grid)}.hitbox{fill:transparent}.hit:hover rect:not(.hitbox){opacity:.8}
-.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--text2);margin:6px 0 8px}.legend i.k{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
-i.k.s-used,i.k.c1{background:var(--c1)}i.k.s-spot,i.k.c2{background:var(--c2)}i.k.c3{background:var(--c3)}i.k.c4{background:var(--c4)}
-i.k.s-unused,i.k.s-empty{border:1px dashed var(--muted)}i.k.s-held{border:1px dashed var(--c2)}
-i.k.s-unack{background:repeating-linear-gradient(45deg,var(--c2) 0 2px,transparent 2px 5px);border:1px solid var(--c2)}i.k.limit-k{width:3px;background:var(--text)}
-.scroll{overflow:auto;max-height:420px}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);white-space:nowrap}
-th{color:var(--text2);font-weight:600}details.tv{margin-top:8px}summary{cursor:pointer;color:var(--text2);font-size:13px}
-#tip{position:fixed;pointer-events:none;background:var(--text);color:var(--surface);padding:5px 8px;border-radius:6px;font-size:12px;display:none;max-width:320px;z-index:9}
-"""
+# One stylesheet for the report page and the pack surfaces (ui/src).
+CSS = (Path(__file__).resolve().parent.parent / "ui/src/surface.css").read_text()
 
 JS = """
 const tip=document.getElementById('tip');

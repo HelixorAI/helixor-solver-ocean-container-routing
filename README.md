@@ -204,7 +204,7 @@ set -a && . ./.env && set +a
 
 ### 1. Publish the solver pack
 
-This command builds `dist/ocean_container_routing-2.3.zip`, validates it,
+This command builds `dist/ocean_container_routing-2.4.zip`, validates it,
 uploads it and activates it. It then reads the manifest back.
 
 Pack versions are immutable. Publishing the same version again with different
@@ -386,14 +386,18 @@ This writes one self-contained HTML page with:
 When the continuous and pinning results exist, it adds them too. The charts
 are the manifest's declared `ui.visualizations`. Each KPI names a rule and is
 evaluated from that rule's contract, and a test checks every KPI against the
-independent scorer. The Solver UX lists this problem type on its solve page,
-but it does not yet render pack-declared visualizations. Until it does, this
-command is how to see them: run it and open the page in a browser.
+independent scorer. Run it and open the page in a browser.
+
+The pack ships the same views as two Solver UX surfaces (`pack/ui`, built from
+`ui/src` with `python scripts/build_surfaces.py`): the `problem` surface under
+Data Input > Visualize, and the `solution` surface in the solution panel. Each
+is a self-contained page the Solver UX shows in a sandboxed frame; it has no
+network access and never sees your token.
 
 ## Results
 
 Measured on 2026-11-06 on macOS (Apple silicon), CPU only, with pack 2.2.
-(2.3 differs only in the demo dataset.)
+(2.3 differs only in the demo dataset, 2.4 only in its Solver UX surfaces.)
 
 - Hosted path: the Helixor Solver server run locally, behind the same REST API
   as the hosted service. Requests send `"solver": {"mode": "local"}`, which
@@ -547,10 +551,13 @@ ocean_routing/
   optimum.py               exact MIP yardstick (optional, ortools)
   pinning.py               pinning scenarios: one disruption, one pin choice per run
   report.py                renders the manifest's declared visualizations as HTML
+  surfaces.py              builds the pack's Solver UX surfaces (pack/ui) from ui/src
   cli.py                   python -m ocean_routing ...
 data/scenario.json         generated scenario (seed 7)
 data/events/replay.json    five event cycles for continuous planning, including a peak surge
 scripts/build_pack.py      builds the pack zip (publish-pack does this for you)
+scripts/build_surfaces.py  rebuilds pack/ui/*.html from ui/src (the pack build refuses stale ones)
+ui/src/                    surface.js and surface.css: the Solver UX surfaces' source
 scripts/summary_table.py   prints the continuous-planning tables from out/continuous/summary.json
 tests/                     offline tests, and opt-in live tests
 out/, dist/                generated; not committed
@@ -569,8 +576,9 @@ out/, dist/                generated; not committed
   (see Results). The exact MIP shows what the same request allows.
 - **Pack policy.** Keep `policy_id: booking_consolidation`. With another
   policy id, the server may not apply the pack's own rules.
-- **Solver UX charts.** The Solver UX does not yet read `ui.visualizations` from
-  a pack. Use `python -m ocean_routing report` to see them.
+- **Solver UX charts.** The pack's surfaces need a Solver UX that hosts pack
+  surfaces. They show the plan's views but not the continuous-planning and
+  pinning replays; `python -m ocean_routing report` adds those.
 - **Acceptance risk is one price.** Relying on unacknowledged space costs the
   same on every carrier. A carrier that rarely accepts over-allocation could
   carry a higher price per sailing, as one more lowered attribute.
